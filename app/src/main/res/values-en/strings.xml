@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OPN2 MIDI Player</string>
+    <string name="adlibdrums">AdLib drums mode</string>
+    <string name="bankNo">Music bank</string>
+    <string name="htremolo">Deep Tremolo</string>
+    <string name="hvibrato">Deep Vibrato</string>
+    <string name="open">Open</string>
+    <string name="playpause">Play/Pause</string>
+    <string name="quit">Quit</string>
+    <string name="scalemod">Scalable modulation</string>
+    <string name="num4opChans">Total number of 4-op channels</string>
+    <string name="numChips">Number of emulated chips</string>
+    <string name="restart">Restart</string>
+    <string name="logvolumes">Logarophmic volumes</string>
+    <string name="volumesModel">Volume ranges model</string>
+    <string name="vrmAuto">[Auto]</string>
+    <string name="vrmGeneric">Generic</string>
+    <string name="vrmCMF">CMF</string>
+    <string name="vrmDMX">DMX</string>
+    <string name="vrmApogee">Apogee</string>
+    <string name="vrm9x">9X</string>
+</resources>

@@ -1,8 +1,8 @@
 /*
- * libADLMIDI is a free MIDI to WAV conversion library with OPL3 emulation
+ * libOPNMIDI is a free MIDI to WAV conversion library with OPN2 (YM2612) emulation
  *
- * Original ADLMIDI code: Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
- * ADLMIDI Library API:   Copyright (c) 2017 Vitaly Novichkov <admin@wohlnet.ru>
+ * MIDI parser and player (Original code from ADLMIDI): Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
+ * OPNMIDI Library and YM2612 support:   Copyright (c) 2017 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
  * http://iki.fi/bisqwit/source/adlmidi.html
@@ -81,6 +81,9 @@ extern void opn2_setLogarithmicVolumes(struct OPN2_MIDIPlayer *device, int logvo
 /*Set different volume range model */
 extern void opn2_setVolumeRangeModel(struct OPN2_MIDIPlayer *device, int volumeModel);
 
+
+/*Returns chip emulator name string*/
+extern const char *opn2_emulatorName();
 
 /*Returns string which contains last error message*/
 extern const char *opn2_errorString();

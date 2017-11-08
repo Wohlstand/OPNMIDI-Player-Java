@@ -1,8 +1,8 @@
 /*
- * libADLMIDI is a free MIDI to WAV conversion library with OPL3 emulation
+ * libOPNMIDI is a free MIDI to WAV conversion library with OPN2 (YM2612) emulation
  *
- * Original ADLMIDI code: Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
- * ADLMIDI Library API:   Copyright (c) 2017 Vitaly Novichkov <admin@wohlnet.ru>
+ * MIDI parser and player (Original code from ADLMIDI): Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
+ * OPNMIDI Library and YM2612 support:   Copyright (c) 2017 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
  * http://iki.fi/bisqwit/source/adlmidi.html
@@ -327,11 +327,7 @@ void OPNMIDIplay::NoteUpdate(uint16_t MidCh,
                 if(Ch[MidCh].vibrato && d.vibdelay >= Ch[MidCh].vibdelay)
                     bend += Ch[MidCh].vibrato * Ch[MidCh].vibdepth * std::sin(Ch[MidCh].vibpos);
 
-                #ifdef ADLMIDI_USE_DOSBOX_OPL
-#define BEND_COEFFICIENT 172.00093
-                #else
-#define BEND_COEFFICIENT 172.4387
-                #endif
+#define BEND_COEFFICIENT 321.88557
                 opn.NoteOn(c, BEND_COEFFICIENT * std::exp(0.057762265 * (tone + bend + phase)));
 #undef BEND_COEFFICIENT
             }
@@ -537,10 +533,10 @@ void OPNMIDIplay::HandleEvent(size_t tk)
         // vol=0 and event 8x are both Keyoff-only.
         if(vol == 0 || EvType == 0x8) break;
 
-        uint8_t midiins = Ch[MidCh].patch;
+        uint32_t midiins = Ch[MidCh].patch;
 
         if(MidCh % 16 == 9)
-            midiins = 128 + note; // Percussion instrument
+            midiins = opn.dynamic_percussion_offset + note; // Percussion instrument
 
         /*
             if(MidCh%16 == 9 || (midiins != 32 && midiins != 46 && midiins != 48 && midiins != 50))
@@ -1239,8 +1235,7 @@ void OPNMIDIplay::UpdateArpeggio(double) // amount = amount of time passed
     for(uint32_t c = 0; c < opn.NumChannels; ++c)
     {
 retry_arpeggio:
-
-        if(c > std::numeric_limits<int32_t>::max())
+        if(c > uint32_t(std::numeric_limits<int32_t>::max()))
             break;
 
         size_t n_users = ch[c].users.size();

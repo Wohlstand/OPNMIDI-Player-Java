@@ -1,8 +1,8 @@
 /*
- * libADLMIDI is a free MIDI to WAV conversion library with OPL3 emulation
+ * libOPNMIDI is a free MIDI to WAV conversion library with OPN2 (YM2612) emulation
  *
- * Original ADLMIDI code: Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
- * ADLMIDI Library API:   Copyright (c) 2017 Vitaly Novichkov <admin@wohlnet.ru>
+ * MIDI parser and player (Original code from ADLMIDI): Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
+ * OPNMIDI Library and YM2612 support:   Copyright (c) 2017 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
  * http://iki.fi/bisqwit/source/adlmidi.html
@@ -303,7 +303,7 @@ riffskip:
 
         uint8_t *mid = NULL;
         uint32_t mid_len = 0;
-        int m2mret = AdlMidi_mus2midi(mus, static_cast<uint32_t>(mus_len),
+        int m2mret = OpnMidi_mus2midi(mus, static_cast<uint32_t>(mus_len),
                                       &mid, &mid_len, 0);
         if(mus) free(mus);
         if(m2mret < 0)
@@ -341,7 +341,7 @@ riffskip:
 
         uint8_t *mid = NULL;
         uint32_t mid_len = 0;
-        int m2mret = AdlMidi_xmi2midi(mus, static_cast<uint32_t>(mus_len),
+        int m2mret = OpnMidi_xmi2midi(mus, static_cast<uint32_t>(mus_len),
                                       &mid, &mid_len, XMIDI_CONVERT_NOCONVERSION);
         if(mus) free(mus);
         if(m2mret < 0)

@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 3.4.1)
 # You can define multiple libraries, and CMake builds it for you.
 # Gradle automatically packages shared libraries with your APK.
 
-add_definitions(-DADLMIDI_USE_DOSBOX_OPL)
+add_definitions(-DUSE_LEGACY_EMULATOR)
 
 add_library( # Sets the name of the library.
              native-lib
@@ -28,7 +28,7 @@ add_library( # Sets the name of the library.
              src/main/cpp/OPNMIDI/opnmidi_private.cpp
              src/main/cpp/OPNMIDI/opnmidi_xmi2mid.c
              src/main/cpp/OPNMIDI/opnmidi_mus2mid.c
-             src/main/cpp/OPNMIDI/Ym2612_Emu.cpp
+             src/main/cpp/OPNMIDI/Ym2612_ChipEmu.cpp
              src/main/cpp/native-lib.cpp )
 
 # Searches for a specified prebuilt library and stores the path as a

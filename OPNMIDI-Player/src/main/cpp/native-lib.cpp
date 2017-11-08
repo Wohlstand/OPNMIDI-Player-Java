@@ -205,7 +205,9 @@ void infiniteLoopStream(OPN2_MIDIPlayer* device)
 JNIEXPORT void JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_startPlaying(JNIEnv *env, jobject instance, jlong device)
 {
+    pthread_mutex_lock(&g_lock);
     infiniteLoopStream(ADLDEV);
+    pthread_mutex_unlock(&g_lock);
 }
 
 JNIEXPORT void JNICALL
@@ -218,8 +220,11 @@ Java_ru_wohlsoft_opnmidiplayer_Player_stopPlaying(JNIEnv *env, jobject instance)
 JNIEXPORT jstring JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_adl_1errorString(JNIEnv *env, jobject instance)
 {
+    pthread_mutex_lock(&g_lock);
     const char* adlMIDIerr = opn2_errorString();
-    return env->NewStringUTF(adlMIDIerr);
+    jstring ret = env->NewStringUTF(adlMIDIerr);
+    pthread_mutex_unlock(&g_lock);
+    return ret;
 }
 
 JNIEXPORT jstring JNICALL
@@ -232,7 +237,10 @@ Java_ru_wohlsoft_opnmidiplayer_Player_stringFromJNI(JNIEnv *env, jobject /* this
 JNIEXPORT jint JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setNumCards(JNIEnv *env, jobject instance, jlong device,
                                                        jint numCards) {
-    return (jint)opn2_setNumCards(ADLDEV, (int)numCards);
+    pthread_mutex_lock(&g_lock);
+    jint ret = (jint)opn2_setNumCards(ADLDEV, (int)numCards);
+    pthread_mutex_unlock(&g_lock);
+    return ret;
 }
 
 JNIEXPORT jlong JNICALL
@@ -245,33 +253,41 @@ JNIEXPORT void JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setScaleModulators(JNIEnv *env, jobject instance,
                                                               jlong device, jint smod)
 {
+    pthread_mutex_lock(&g_lock);
     opn2_setScaleModulators(ADLDEV, (int)smod);
+    pthread_mutex_unlock(&g_lock);
 }
 
 JNIEXPORT void JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setLoopEnabled(JNIEnv *env, jobject instance,
                                                           jlong device, jint loopEn)
 {
+    pthread_mutex_lock(&g_lock);
     opn2_setLoopEnabled(ADLDEV, (int)loopEn);
+    pthread_mutex_unlock(&g_lock);
 }
 
 
 JNIEXPORT jint JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_adl_1openBankFile(JNIEnv *env, jobject instance, jlong device,
                                                     jstring file_) {
+    pthread_mutex_lock(&g_lock);
     const char *file = env->GetStringUTFChars(file_, 0);
     int ret = opn2_openBankFile(ADLDEV, (char*)file);
     env->ReleaseStringUTFChars(file_, file);
+    pthread_mutex_unlock(&g_lock);
     return ret;
 }
 
 JNIEXPORT jint JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_adl_1openBankData(JNIEnv *env, jobject instance, jlong device,
                                                     jbyteArray array_) {
+    pthread_mutex_lock(&g_lock);
     jbyte *array = env->GetByteArrayElements(array_, NULL);
     jsize length =  env->GetArrayLength(array_);
     jint ret = opn2_openBankData(ADLDEV, array, length);
     env->ReleaseByteArrayElements(array_, array, 0);
+    pthread_mutex_unlock(&g_lock);
     return ret;
 }
 
@@ -279,42 +295,52 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1openBankData(JNIEnv *env, jobject ins
 JNIEXPORT jint JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_adl_1openFile(JNIEnv *env, jobject instance, jlong device,
                                                     jstring file_) {
+    pthread_mutex_lock(&g_lock);
     const char *file = env->GetStringUTFChars(file_, 0);
     int ret = opn2_openFile(ADLDEV, (char*)file);
     env->ReleaseStringUTFChars(file_, file);
+    pthread_mutex_unlock(&g_lock);
     return ret;
 }
 
 JNIEXPORT jint JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_adl_1openData(JNIEnv *env, jobject instance, jlong device,
                                                     jbyteArray array_) {
+    pthread_mutex_lock(&g_lock);
     jbyte *array = env->GetByteArrayElements(array_, NULL);
     jsize length =  env->GetArrayLength(array_);
     jint ret = opn2_openData(ADLDEV, array, length);
     env->ReleaseByteArrayElements(array_, array, 0);
+    pthread_mutex_unlock(&g_lock);
     return ret;
 }
 
 JNIEXPORT void JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_adl_1reset(JNIEnv *env, jobject instance, jlong device) {
+    pthread_mutex_lock(&g_lock);
     opn2_reset(ADLDEV);
+    pthread_mutex_unlock(&g_lock);
 }
 
 JNIEXPORT void JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_adl_1close(JNIEnv *env, jobject instance, jlong device)
 {
+    pthread_mutex_lock(&g_lock);
     opn2_close(ADLDEV);
+    pthread_mutex_unlock(&g_lock);
 }
 
 JNIEXPORT jint JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_adl_1play(JNIEnv *env, jobject instance, jlong device,
                                                 jshortArray buffer_)
 {
+    pthread_mutex_lock(&g_lock);
     jshort *buffer = env->GetShortArrayElements(buffer_, NULL);
     jsize  length =  env->GetArrayLength(buffer_);
     short* outBuff = (short*)buffer;
     jint gotSamples = opn2_play(ADLDEV, length, outBuff);
     env->ReleaseShortArrayElements(buffer_, buffer, 0);
+    pthread_mutex_unlock(&g_lock);
     return gotSamples;
 }
 
@@ -329,12 +355,15 @@ JNIEXPORT void JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setLogarithmicVolumes(JNIEnv *env, jobject instance,
                                                                  jlong device, jint logvol)
 {
+    pthread_mutex_lock(&g_lock);
     opn2_setLogarithmicVolumes(ADLDEV, (int)logvol);
+    pthread_mutex_unlock(&g_lock);
 }
 
 JNIEXPORT void JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setVolumeRangeModel(JNIEnv *env, jobject instance,
                                                                jlong device, jint volumeModel) {
-
+    pthread_mutex_lock(&g_lock);
     opn2_setVolumeRangeModel(ADLDEV, (int)volumeModel);
+    pthread_mutex_unlock(&g_lock);
 }

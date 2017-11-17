@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <string>
 #include <assert.h>
+#include <memory.h>
 #include "OPNMIDI/opnmidi.h"
 
 #include <SLES/OpenSLES.h>
@@ -238,7 +239,7 @@ JNIEXPORT jint JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setNumCards(JNIEnv *env, jobject instance, jlong device,
                                                        jint numCards) {
     pthread_mutex_lock(&g_lock);
-    jint ret = (jint)opn2_setNumCards(ADLDEV, (int)numCards);
+    jint ret = (jint)opn2_setNumChips(ADLDEV, (int)numCards);
     pthread_mutex_unlock(&g_lock);
     return ret;
 }

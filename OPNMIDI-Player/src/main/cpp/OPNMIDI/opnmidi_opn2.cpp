@@ -36,17 +36,17 @@ static inline void getOpnChannel(uint32_t   in_channel,
     out_ch = ch4 % 3;
 }
 
-const opnInstMeta &OPN2::GetAdlMetaIns(unsigned n)
+const opnInstMeta &OPN2::GetAdlMetaIns(size_t n)
 {
     return dynamic_metainstruments[n];
 }
 
-unsigned OPN2::GetAdlMetaNumber(unsigned midiins)
+size_t OPN2::GetAdlMetaNumber(size_t midiins)
 {
     return midiins;
 }
 
-const opnInstData &OPN2::GetAdlIns(unsigned short insno)
+const opnInstData &OPN2::GetAdlIns(size_t insno)
 {
     return dynamic_instruments[insno];
 }
@@ -58,6 +58,7 @@ OPN2::OPN2() :
     DynamicMetaInstrumentTag(0x4000000u),
     NumCards(1),
     LogarithmicVolumes(false),
+    m_musicMode(MODE_MIDI),
     m_volumeScale(VOLUME_Generic)
 {}
 
@@ -121,7 +122,7 @@ void OPN2::Touch_Real(unsigned c, unsigned volume)
     uint8_t     port, cc;
     getOpnChannel(c, card, port, cc);
 
-    uint16_t    i = ins[c];
+    size_t i = ins[c];
     const opnInstData &adli = GetAdlIns(i);
 
     uint8_t op_vol[4] =
@@ -165,15 +166,13 @@ void OPN2::Touch_Real(unsigned c, unsigned volume)
     //   63 + chanvol * (instrvol / 63.0 - 1)
 }
 
-void OPN2::Patch(uint16_t c, uint16_t i)
+void OPN2::Patch(uint16_t c, size_t i)
 {
     unsigned    card;
     uint8_t     port, cc;
     getOpnChannel(uint16_t(c), card, port, cc);
-
     ins[c] = i;
     const opnInstData &adli = GetAdlIns(i);
-
     #if 1 //Reg1-Op1, Reg1-Op2, Reg1-Op3, Reg1-Op4,....
     for(uint8_t d = 0; d < 7; d++)
     {
@@ -255,7 +254,7 @@ void OPN2::ClearChips()
     cardsOP2.clear();
 }
 
-void OPN2::Reset()
+void OPN2::Reset(unsigned long PCM_RATE)
 {
     ClearChips();
     ins.clear();
@@ -270,11 +269,11 @@ void OPN2::Reset()
     {
     #ifdef USE_LEGACY_EMULATOR
         cardsOP2[i] = new OPNMIDI_Ym2612_Emu();
-        cardsOP2[i]->set_rate(_parent->PCM_RATE, 7670454.0);
+        cardsOP2[i]->set_rate(PCM_RATE, 7670454.0);
     #else
         cardsOP2[i] = new ym3438_t;
         std::memset(cardsOP2[i], 0, sizeof(ym3438_t));
-        OPN2_Reset(cardsOP2[i], (Bit32u)_parent->PCM_RATE, 7670454);
+        OPN2_Reset(cardsOP2[i], (Bit32u)PCM_RATE, 7670454);
     #endif
     }
     NumChannels = NumCards * 6;

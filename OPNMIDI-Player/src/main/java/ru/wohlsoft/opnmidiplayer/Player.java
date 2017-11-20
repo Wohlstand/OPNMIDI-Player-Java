@@ -6,6 +6,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
@@ -17,6 +18,7 @@ import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.NumberPicker;
+import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Button;
@@ -37,6 +39,33 @@ public class Player extends AppCompatActivity {
     public final int            BUF_SIZE = 10240;
     private long                MIDIDevice = 0;
     private volatile boolean    isPlaying = false;
+
+    private class SeekSyncThread extends AsyncTask<Integer, Void, Void> {
+        @Override
+        protected Void doInBackground(Integer... params) {
+            while(!isCancelled()) {
+                try {
+                    Thread.sleep(1000);
+                    if(isPlaying && (MIDIDevice != 0)) {
+                        runOnUiThread(new Runnable()
+                        {
+                            @Override
+                            public void run() {
+                                SeekBar musPos = (SeekBar) findViewById(R.id.musPos);
+                                musPos.setProgress((int)adl_positionTell(MIDIDevice));
+                            }
+                        });
+                    }
+                } catch (InterruptedException e) {
+                    //e.printStackTrace();
+                }
+            }
+
+            return null;
+        }
+    }
+
+    private SeekSyncThread      seekSyncThread;
 
     private SharedPreferences   m_setup = null;
 
@@ -323,6 +352,24 @@ public class Player extends AppCompatActivity {
                 OnRestartClick(view);
             }
         });
+
+        SeekBar musPos = (SeekBar) findViewById(R.id.musPos);
+        musPos.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            //private double dstPos = 0;
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if(isPlaying && (MIDIDevice != 0) && fromUser)
+                    adl_positionSeek(MIDIDevice, (double)progress);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        });
     }
 
     private void playerPlay()
@@ -361,6 +408,8 @@ public class Player extends AppCompatActivity {
         notificationManager.notify(0, b);
 
         startPlaying(MIDIDevice);
+        seekSyncThread = new SeekSyncThread();
+        seekSyncThread.execute(0);
     }
 
     private void playerStop()
@@ -368,6 +417,8 @@ public class Player extends AppCompatActivity {
         if(!isPlaying)
             return;
         isPlaying = false;
+        seekSyncThread.cancel(true);
+
         NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         notificationManager.cancelAll();
 
@@ -387,9 +438,10 @@ public class Player extends AppCompatActivity {
         uninitPlayer();
         MIDIDevice = adl_init(44100);
         adl_setNumCards(MIDIDevice, m_adl_numChips);
-        adl_setScaleModulators(MIDIDevice, m_ADL_scalable?1:0);
-        adl_setLogarithmicVolumes(MIDIDevice, m_ADL_logvolumes?1:0);
+        adl_setScaleModulators(MIDIDevice, m_ADL_scalable ? 1 : 0);
+        adl_setLogarithmicVolumes(MIDIDevice, m_ADL_logvolumes ? 1 : 0);
         adl_setVolumeRangeModel(MIDIDevice, m_ADL_volumeModel);
+        adl_setLoopEnabled(MIDIDevice, 1);
         adl_openBankFile(MIDIDevice, "/sdcard/gm.wopn");
     }
 
@@ -481,6 +533,10 @@ public class Player extends AppCompatActivity {
                                 b.show();
                                 m_lastFile = "";
                             } else {
+                                double time = adl_totalTimeLength(MIDIDevice);
+                                SeekBar musPos = (SeekBar) findViewById(R.id.musPos);
+                                musPos.setMax((int)time);
+                                musPos.setProgress(0);
                                 if (wasPlay)
                                     playerPlay();
                             }
@@ -510,11 +566,6 @@ public class Player extends AppCompatActivity {
 //    /* Sets number of emulated sound cards (from 1 to 100). Emulation of multiple sound cards exchanges polyphony limits*/
 //    extern int adl_setNumCards(struct ADL_MIDIPlayer*device, int numCards);
     public native int adl_setNumCards(long device, int numCards);
-//
-///* Sets a number of the patches bank from 0 to N banks */
-//    extern int adl_setBank(struct ADL_MIDIPlayer* device, int bank);
-//
-    public native int adl_setBank(long device, int bank);
 
 ///* Returns total number of available banks */
 //    extern int adl_getBanksCount();
@@ -591,6 +642,18 @@ public class Player extends AppCompatActivity {
 ///*Take a sample buffer*/
 //    extern int  adl_play(struct ADL_MIDIPlayer*device, int sampleCount, short out[]);
     public native int adl_play(long device, short[] buffer);
+
+    /*Get total time length of current song*/
+//extern double adl_totalTimeLength(struct ADL_MIDIPlayer *device);
+    public native double adl_totalTimeLength(long device);
+
+    /*Jump to absolute time position in seconds*/
+//extern void adl_positionSeek(struct ADL_MIDIPlayer *device, double seconds);
+    public native void adl_positionSeek(long device, double seconds);
+
+    /*Get current time position in seconds*/
+//extern double adl_positionTell(struct ADL_MIDIPlayer *device);
+    public native double adl_positionTell(long device);
 
 
     // Used to load the 'native-lib' library on application startup.

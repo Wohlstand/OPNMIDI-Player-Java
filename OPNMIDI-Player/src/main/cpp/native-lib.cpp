@@ -345,6 +345,35 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1play(JNIEnv *env, jobject instance, j
     return gotSamples;
 }
 
+
+JNIEXPORT jdouble JNICALL
+Java_ru_wohlsoft_opnmidiplayer_Player_adl_1positionTell(JNIEnv *env, jobject instance, jlong device)
+{
+    pthread_mutex_lock(&g_lock);
+    jdouble ret = (jdouble)opn2_positionTell(ADLDEV);
+    pthread_mutex_unlock(&g_lock);
+    return ret;
+}
+
+JNIEXPORT jdouble JNICALL
+Java_ru_wohlsoft_opnmidiplayer_Player_adl_1totalTimeLength(JNIEnv *env, jobject instance, jlong device)
+{
+    pthread_mutex_lock(&g_lock);
+    jdouble ret = (jdouble)opn2_totalTimeLength(ADLDEV);
+    pthread_mutex_unlock(&g_lock);
+    return ret;
+}
+
+JNIEXPORT void JNICALL
+Java_ru_wohlsoft_opnmidiplayer_Player_adl_1positionSeek(JNIEnv *env, jobject instance, jlong device,
+                                                        jdouble seconds)
+{
+    pthread_mutex_lock(&g_lock);
+    opn2_positionSeek(ADLDEV, (double)seconds);
+    pthread_mutex_unlock(&g_lock);
+}
+
+
 JNIEXPORT jstring JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_adl_1getBankName(JNIEnv *env, jobject instance, jint bank)
 {

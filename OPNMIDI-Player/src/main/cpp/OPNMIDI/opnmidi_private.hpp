@@ -294,7 +294,7 @@ public:
             mp_tell = 0;
         }
 
-        void openData(void *mem, size_t lenght)
+        void openData(const void *mem, size_t lenght)
         {
             fp = NULL;
             mp = mem;
@@ -344,7 +344,7 @@ public:
 
                 while((pos < maxSize) && (mp_tell < mp_size))
                 {
-                    reinterpret_cast<unsigned char *>(buf)[pos] = reinterpret_cast<unsigned char *>(mp)[mp_tell];
+                    reinterpret_cast<unsigned char *>(buf)[pos] = reinterpret_cast<unsigned const char *>(mp)[mp_tell];
                     mp_tell++;
                     pos++;
                 }
@@ -360,7 +360,7 @@ public:
             else
             {
                 if(mp_tell >= mp_size) return -1;
-                int x = reinterpret_cast<unsigned char *>(mp)[mp_tell];
+                int x = reinterpret_cast<unsigned const char *>(mp)[mp_tell];
                 mp_tell++;
                 return x;
             }
@@ -398,7 +398,7 @@ public:
         }
         std::string _fileName;
         std::FILE   *fp;
-        void        *mp;
+        const void  *mp;
         size_t      mp_size;
         size_t      mp_tell;
     };
@@ -680,6 +680,10 @@ private:
 
     //! Missing instruments catches
     std::set<uint8_t> caugh_missing_instruments;
+    //! Missing melodic banks catches
+    std::set<uint16_t> caugh_missing_banks_melodic;
+    //! Missing percussion banks catches
+    std::set<uint16_t> caugh_missing_banks_percussion;
 
     /**
      * @brief Build MIDI track data from the raw track data storage
@@ -739,11 +743,11 @@ public:
     uint64_t ReadVarLenEx(uint8_t **ptr, uint8_t *end, bool &ok);
 
     bool LoadBank(const std::string &filename);
-    bool LoadBank(void *data, unsigned long size);
+    bool LoadBank(const void *data, size_t size);
     bool LoadBank(fileReader &fr);
 
     bool LoadMIDI(const std::string &filename);
-    bool LoadMIDI(void *data, unsigned long size);
+    bool LoadMIDI(const void *data, size_t size);
     bool LoadMIDI(fileReader &fr);
 
     /**

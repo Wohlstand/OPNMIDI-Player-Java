@@ -2,7 +2,7 @@
 #include <string>
 #include <assert.h>
 #include <memory.h>
-#include "OPNMIDI/opnmidi.h"
+#include <opnmidi.h>
 
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
@@ -231,7 +231,8 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1errorString(JNIEnv *env, jobject inst
 JNIEXPORT jstring JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_stringFromJNI(JNIEnv *env, jobject /* this */)
 {
-    std::string hello = "Hello from C++";
+    std::string hello = opn2_emulatorName();
+    hello += " OPN2 Emulator is ready";
     return env->NewStringUTF(hello.c_str());
 }
 

@@ -11,6 +11,12 @@ cmake_minimum_required(VERSION 3.4.1)
 
 add_definitions(-DUSE_LEGACY_EMULATOR)
 
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Os -s -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,-s")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Os -s -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,-s")
+set(LINK_FLAGS_RELEASE "${LINK_FLAGS_RELEASE} -Wl,--gc-sections -Wl,-s")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -fno-omit-frame-pointer")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-omit-frame-pointer")
+
 add_library( # Sets the name of the library.
              native-lib
 
@@ -21,15 +27,17 @@ add_library( # Sets the name of the library.
              # Associated headers in the same location as their source
              # file are automatically included.
              # file are automatically included.
-             src/main/cpp/OPNMIDI/opnmidi.cpp
-             src/main/cpp/OPNMIDI/opnmidi_load.cpp
-             src/main/cpp/OPNMIDI/opnmidi_midiplay.cpp
-             src/main/cpp/OPNMIDI/opnmidi_opn2.cpp
-             src/main/cpp/OPNMIDI/opnmidi_private.cpp
-             src/main/cpp/OPNMIDI/opnmidi_xmi2mid.c
-             src/main/cpp/OPNMIDI/opnmidi_mus2mid.c
-             src/main/cpp/OPNMIDI/Ym2612_ChipEmu.cpp
+             src/main/cpp/src/opnmidi.cpp
+             src/main/cpp/src/opnmidi_load.cpp
+             src/main/cpp/src/opnmidi_midiplay.cpp
+             src/main/cpp/src/opnmidi_opn2.cpp
+             src/main/cpp/src/opnmidi_private.cpp
+             src/main/cpp/src/opnmidi_xmi2mid.c
+             src/main/cpp/src/opnmidi_mus2mid.c
+             src/main/cpp/src/Ym2612_ChipEmu.cpp
              src/main/cpp/native-lib.cpp )
+
+target_include_directories(native-lib PUBLIC src/main/cpp/include)
 
 # Searches for a specified prebuilt library and stores the path as a
 # variable. Because system libraries are included in the search path by

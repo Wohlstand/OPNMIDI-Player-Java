@@ -1407,7 +1407,7 @@ void OPNMIDIplay::NoteUpdate(uint16_t MidCh,
                 //volume = (int)(volume * std::sqrt( (double) ch[c].users.size() ));
 
                 if(opn.LogarithmicVolumes)
-                    volume = volume * 127 / (127 * 127 * 127);
+                    volume = volume * 127 / (2048383/*127 * 127 * 127*/);
                 else
                 {
                     // The formula below: SOLVE(V=127^3 * 2^( (A-63.49999) / 8), A)
@@ -2029,7 +2029,7 @@ long OPNMIDIplay::CalculateAdlChannelGoodness(size_t c, uint16_t ins, uint16_t) 
         // If there is another channel to which this note
         // can be evacuated to in the case of congestion,
         // increase the score slightly.
-        unsigned n_evacuation_stations = 0;
+//        unsigned n_evacuation_stations = 0;
 
 //        for(unsigned c2 = 0; c2 < opn.NumChannels; ++c2)
 //        {
@@ -2050,7 +2050,7 @@ long OPNMIDIplay::CalculateAdlChannelGoodness(size_t c, uint16_t ins, uint16_t) 
 //            }
 //        }
 
-        s += n_evacuation_stations * 4;
+//        s += n_evacuation_stations * 4;
     }
 
     return s;

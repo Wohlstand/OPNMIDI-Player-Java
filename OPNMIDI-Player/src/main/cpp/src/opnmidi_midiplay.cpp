@@ -2,7 +2,7 @@
  * libOPNMIDI is a free MIDI to WAV conversion library with OPN2 (YM2612) emulation
  *
  * MIDI parser and player (Original code from ADLMIDI): Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
- * OPNMIDI Library and YM2612 support:   Copyright (c) 2017 Vitaly Novichkov <admin@wohlnet.ru>
+ * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2018 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
  * http://iki.fi/bisqwit/source/adlmidi.html
@@ -92,6 +92,8 @@ void OPNMIDIplay::OpnChannel::AddAge(int64_t ms)
         }
     }
 }
+
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
 
 OPNMIDIplay::MidiEvent::MidiEvent() :
     type(T_UNKNOWN),
@@ -211,7 +213,9 @@ void OPNMIDIplay::MidiTrackRow::sortEvents(bool *noteStates)
     events.insert(events.end(), controllers.begin(), controllers.end());
     events.insert(events.end(), anyOther.begin(), anyOther.end());
 }
+#endif //OPNMIDI_DISABLE_MIDI_SEQUENCER
 
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
 bool OPNMIDIplay::buildTrackData()
 {
     fullSongTimeLength = 0.0;
@@ -276,7 +280,7 @@ bool OPNMIDIplay::buildTrackData()
                 evtPos.delay = ReadVarLenEx(&trackPtr, end, ok);
             if(!ok)
             {
-                int len = std::sprintf(error, "buildTrackData: Can't read variable-length value at begin of track %d.\n", (int)tk);
+                int len = snprintf(error, 150, "buildTrackData: Can't read variable-length value at begin of track %d.\n", (int)tk);
                 if((len > 0) && (len < 150))
                     errorString += std::string(error, (size_t)len);
                 return false;
@@ -304,7 +308,7 @@ bool OPNMIDIplay::buildTrackData()
             event = parseEvent(&trackPtr, end, status);
             if(!event.isValid)
             {
-                int len = std::sprintf(error, "buildTrackData: Fail to parse event in the track %d.\n", (int)tk);
+                int len = snprintf(error, 150, "buildTrackData: Fail to parse event in the track %d.\n", (int)tk);
                 if((len > 0) && (len < 150))
                     errorString += std::string(error, (size_t)len);
                 return false;
@@ -360,10 +364,9 @@ bool OPNMIDIplay::buildTrackData()
                 evtPos.delay = ReadVarLenEx(&trackPtr, end, ok);
                 if(!ok)
                 {
-                    int len = std::sprintf(error, "buildTrackData: Can't read variable-length value in the track %d.\n", (int)tk);
-                    if((len > 0) && (len < 150))
-                        errorString += std::string(error, (size_t)len);
-                    return false;
+                    /* End of track has been reached! However, there is no EOT event presented */
+                    event.type = MidiEvent::T_SPECIAL;
+                    event.subtype = MidiEvent::ST_ENDTRACK;
                 }
             }
 
@@ -649,12 +652,12 @@ bool OPNMIDIplay::buildTrackData()
 
     return true;
 }
+#endif //OPNMIDI_DISABLE_MIDI_SEQUENCER
 
 
-
-OPNMIDIplay::OPNMIDIplay():
-    //cmf_percussion_mode(false),
-    fullSongTimeLength(0.0),
+OPNMIDIplay::OPNMIDIplay(unsigned long sampleRate)
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
+    : fullSongTimeLength(0.0),
     postSongWaitDelay(1.0),
     loopStartTime(-1.0),
     loopEndTime(-1.0),
@@ -663,23 +666,49 @@ OPNMIDIplay::OPNMIDIplay():
     loopStart(false),
     loopEnd(false),
     invalidLoop(false)
+#endif
 {
     devices.clear();
+
+    m_setup.emulator = OPNMIDI_EMU_MAME;
+
+    m_setup.PCM_RATE = sampleRate;
+    m_setup.mindelay = 1.0 / (double)m_setup.PCM_RATE;
+    m_setup.maxdelay = 512.0 / (double)m_setup.PCM_RATE;
 
     m_setup.OpnBank    = 0;
     m_setup.NumCards   = 2;
     m_setup.LogarithmicVolumes  = false;
+    m_setup.VolumeModel = OPNMIDI_VolumeModel_AUTO;
     //m_setup.SkipForward = 0;
     m_setup.loopingIsEnabled = false;
     m_setup.ScaleModulators     = 0;
+    m_setup.fullRangeBrightnessCC74 = false;
     m_setup.delay = 0.0;
     m_setup.carry = 0.0;
-    m_setup.stored_samples = 0;
-    m_setup.backup_samples_size = 0;
+    m_setup.tick_skip_samples_delay = 0;
 
-    opn.NumCards = m_setup.NumCards;
-    opn.LogarithmicVolumes = m_setup.LogarithmicVolumes;
-    opn.ScaleModulators = m_setup.ScaleModulators;
+    applySetup();
+    ChooseDevice("none");
+    realTime_ResetState();
+}
+
+void OPNMIDIplay::applySetup()
+{
+    m_setup.tick_skip_samples_delay = 0;
+
+    opn.ScaleModulators         = m_setup.ScaleModulators;
+    opn.LogarithmicVolumes      = m_setup.LogarithmicVolumes;
+    opn.m_musicMode             = OPN2::MODE_MIDI;
+    opn.ChangeVolumeRangesModel(static_cast<OPNMIDI_VolumeModels>(m_setup.VolumeModel));
+    if(m_setup.VolumeModel == OPNMIDI_VolumeModel_AUTO)
+        opn.m_volumeScale = OPN2::VOLUME_Generic;
+
+    opn.NumCards    = m_setup.NumCards;
+
+    opn.Reset(m_setup.emulator, m_setup.PCM_RATE);
+    ch.clear();
+    ch.resize(opn.NumChannels);
 }
 
 uint64_t OPNMIDIplay::ReadVarLen(uint8_t **ptr)
@@ -714,7 +743,7 @@ uint64_t OPNMIDIplay::ReadVarLenEx(uint8_t **ptr, uint8_t *end, bool &ok)
     return result;
 }
 
-
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
 double OPNMIDIplay::Tick(double s, double granularity)
 {
     s *= tempoMultiplier;
@@ -749,7 +778,17 @@ double OPNMIDIplay::Tick(double s, double granularity)
 
     return CurrentPositionNew.wait;
 }
+#endif //OPNMIDI_DISABLE_MIDI_SEQUENCER
 
+void OPNMIDIplay::TickIteratos(double s)
+{
+    for(uint16_t c = 0; c < opn.NumChannels; ++c)
+        ch[c].AddAge(static_cast<int64_t>(s * 1000.0));
+    UpdateVibrato(s);
+    UpdateArpeggio(s);
+}
+
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
 void OPNMIDIplay::seek(double seconds)
 {
     if(seconds < 0.0)
@@ -757,6 +796,13 @@ void OPNMIDIplay::seek(double seconds)
     const double granularity = m_setup.mindelay,
                  granualityHalf = granularity * 0.5,
                  s = seconds;//m_setup.delay < m_setup.maxdelay ? m_setup.delay : m_setup.maxdelay;
+
+    /* Attempt to go away out of song end must rewind position to begin */
+    if(seconds > fullSongTimeLength)
+    {
+        rewind();
+        return;
+    }
 
     bool loopFlagState = m_setup.loopingIsEnabled;
     // Turn loop pooints off because it causes wrong position rememberin on a quick seek
@@ -848,6 +894,7 @@ void OPNMIDIplay::setTempo(double tempo)
 {
     tempoMultiplier = tempo;
 }
+#endif //OPNMIDI_DISABLE_MIDI_SEQUENCER
 
 void OPNMIDIplay::realTime_ResetState()
 {
@@ -856,7 +903,7 @@ void OPNMIDIplay::realTime_ResetState()
         MIDIchannel &chan = Ch[ch];
         chan.volume = (opn.m_musicMode == OPN2::MODE_RSXX) ? 127 : 100;
         chan.expression = 127;
-        chan.panning = 0x30;
+        chan.panning = 0xC0;
         chan.vibrato = 0;
         chan.sustain = 0;
         chan.bend = 0.0;
@@ -937,7 +984,7 @@ bool OPNMIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocit
             {
                 if(!caugh_missing_banks_melodic.count(bank))
                 {
-                    hooks.onDebugMessage(hooks.onDebugMessage_userData, "[%i] Playing missing percussion bank %i (patch %i)", channel, bank, midiins);
+                    hooks.onDebugMessage(hooks.onDebugMessage_userData, "[%i] Playing missing percussion MIDI bank %i (patch %i)", channel, bank, midiins);
                     caugh_missing_banks_melodic.insert(bank);
                 }
             }
@@ -952,7 +999,7 @@ bool OPNMIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocit
             {
                 if(!caugh_missing_banks_melodic.count(bank))
                 {
-                    hooks.onDebugMessage(hooks.onDebugMessage_userData, "[%i] Playing missing melodic bank %i (patch %i)", channel, bank, midiins);
+                    hooks.onDebugMessage(hooks.onDebugMessage_userData, "[%i] Playing missing melodic MIDI bank %i (patch %i)", channel, bank, midiins);
                     caugh_missing_banks_melodic.insert(bank);
                 }
             }
@@ -967,28 +1014,47 @@ bool OPNMIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocit
         */
     //if(midiins == 56) vol = vol*6/10; // HACK
 
-    const size_t        meta    = opn.GetAdlMetaNumber(midiins);
-    const opnInstMeta  &ains    = opn.GetAdlMetaIns(meta);
+    size_t              meta    = opn.GetAdlMetaNumber(midiins);
+    const opnInstMeta  *ains    = &opn.GetAdlMetaIns(meta);
     int16_t tone = note;
 
-    if(ains.tone)
+    if(!isPercussion && !isXgPercussion && (bank > 0)) // For non-zero banks
+    {
+        if(ains->flags & opnInstMeta::Flag_NoSound)
+        {
+            if(hooks.onDebugMessage)
+            {
+                if(!caugh_missing_instruments.count(static_cast<uint8_t>(midiins)))
+                {
+                    hooks.onDebugMessage(hooks.onDebugMessage_userData, "[%i] Caugh a blank instrument %i (offset %i) in the MIDI bank %u", channel, Ch[channel].patch, midiins, bank);
+                    caugh_missing_instruments.insert(static_cast<uint8_t>(midiins));
+                }
+            }
+            bank = 0;
+            midiins = Ch[channel].patch;
+            meta    = opn.GetAdlMetaNumber(midiins);
+            ains    = &opn.GetAdlMetaIns(meta);
+        }
+    }
+
+    if(ains->tone)
     {
         /*if(ains.tone < 20)
             tone += ains.tone;
         else*/
-        if(ains.tone < 128)
-            tone = ains.tone;
+        if(ains->tone < 128)
+            tone = ains->tone;
         else
-            tone -= ains.tone - 128;
+            tone -= ains->tone - 128;
     }
 
-    uint16_t i[2] = { ains.opnno1, ains.opnno2 };
+    uint16_t i[2] = { ains->opnno1, ains->opnno2 };
     //bool pseudo_4op = ains.flags & opnInstMeta::Flag_Pseudo8op;
     //if((opn.AdlPercussionMode == 1) && PercussionMap[midiins & 0xFF]) i[1] = i[0];
 
     if(hooks.onDebugMessage)
     {
-        if(!caugh_missing_instruments.count(static_cast<uint8_t>(midiins)) && (ains.flags & opnInstMeta::Flag_NoSound))
+        if(!caugh_missing_instruments.count(static_cast<uint8_t>(midiins)) && (ains->flags & opnInstMeta::Flag_NoSound))
         {
             hooks.onDebugMessage(hooks.onDebugMessage_userData, "[%i] Playing missing instrument %i", channel, midiins);
             caugh_missing_instruments.insert(static_cast<uint8_t>(midiins));
@@ -1196,6 +1262,10 @@ void OPNMIDIplay::realTime_Controller(uint8_t channel, uint8_t type, uint8_t val
         KillSustainingNotes(channel);
         break;
 
+    case 120: // All sounds off
+        NoteUpdate_All(channel, Upd_OffMute);
+        break;
+
     case 123: // All notes off
         NoteUpdate_All(channel, Upd_Off);
         break;
@@ -1298,6 +1368,7 @@ void OPNMIDIplay::realTime_BankChange(uint8_t channel, uint16_t bank)
 void OPNMIDIplay::realTime_panic()
 {
     Panic();
+    KillSustainingNotes(-1, -1);
 }
 
 
@@ -1347,7 +1418,8 @@ void OPNMIDIplay::NoteUpdate(uint16_t MidCh,
         uint16_t c   = j->first;
         const MIDIchannel::NoteInfo::Phys &ins = j->second;
 
-        if(select_adlchn >= 0 && c != select_adlchn) continue;
+        if(select_adlchn >= 0 && c != select_adlchn)
+            continue;
 
         if(props_mask & Upd_Off) // note off
         {
@@ -1364,8 +1436,13 @@ void OPNMIDIplay::NoteUpdate(uint16_t MidCh,
                 if(ch[c].users.empty())
                 {
                     opn.NoteOff(c);
-                    ch[c].koff_time_until_neglible =
-                        ains.ms_sound_koff;
+                    if(props_mask & Upd_Mute) // Mute the note
+                    {
+                        opn.Touch_Real(c, 0);
+                        ch[c].koff_time_until_neglible = 0;
+                    } else {
+                        ch[c].koff_time_until_neglible = ains.ms_sound_koff;
+                    }
                 }
             }
             else
@@ -1390,6 +1467,15 @@ void OPNMIDIplay::NoteUpdate(uint16_t MidCh,
             uint32_t volume;
             bool is_percussion = (MidCh == 9) || Ch[MidCh].is_xg_percussion;
             uint8_t brightness = is_percussion ? 127 : Ch[MidCh].brightness;
+
+            if(!m_setup.fullRangeBrightnessCC74)
+            {
+                // Simulate post-High-Pass filter result which affects sounding by half level only
+                if(brightness >= 64)
+                    brightness = 127;
+                else
+                    brightness *= 2;
+            }
 
             switch(opn.m_volumeScale)
             {
@@ -1497,7 +1583,7 @@ void OPNMIDIplay::NoteUpdate(uint16_t MidCh,
         Ch[MidCh].activenotes.erase(i);
 }
 
-
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
 bool OPNMIDIplay::ProcessEventsNew(bool isSeek)
 {
     if(CurrentPositionNew.track.size() == 0)
@@ -1609,7 +1695,9 @@ bool OPNMIDIplay::ProcessEventsNew(bool isSeek)
 
     return true;//Has events in queue
 }
+#endif //OPNMIDI_DISABLE_MIDI_SEQUENCER
 
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
 OPNMIDIplay::MidiEvent OPNMIDIplay::parseEvent(uint8_t **pptr, uint8_t *end, int &status)
 {
     uint8_t *&ptr = *pptr;
@@ -1813,6 +1901,7 @@ OPNMIDIplay::MidiEvent OPNMIDIplay::parseEvent(uint8_t **pptr, uint8_t *end, int
 
     return evt;
 }
+#endif //OPNMIDI_DISABLE_MIDI_SEQUENCER
 
 const std::string &OPNMIDIplay::getErrorString()
 {
@@ -1824,7 +1913,7 @@ void OPNMIDIplay::setErrorString(const std::string &err)
     errorStringOut = err;
 }
 
-
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
 void OPNMIDIplay::HandleEvent(size_t tk, const OPNMIDIplay::MidiEvent &evt, int &status)
 {
     if(hooks.onEvent)
@@ -1981,10 +2070,11 @@ void OPNMIDIplay::HandleEvent(size_t tk, const OPNMIDIplay::MidiEvent &evt, int 
     }
     }
 }
+#endif //OPNMIDI_DISABLE_MIDI_SEQUENCER
 
-long OPNMIDIplay::CalculateAdlChannelGoodness(size_t c, uint16_t ins, uint16_t) const
+int64_t OPNMIDIplay::CalculateAdlChannelGoodness(size_t c, uint16_t ins, uint16_t) const
 {
-    long s = -ch[c].koff_time_until_neglible;
+    int64_t s = -ch[c].koff_time_until_neglible;
 
     // Same midi-instrument = some stability
     //if(c == MidCh) s += 4;
@@ -1996,9 +2086,9 @@ long OPNMIDIplay::CalculateAdlChannelGoodness(size_t c, uint16_t ins, uint16_t) 
         s -= 4000;
 
         if(!j->second.sustained)
-            s -= (long)j->second.kon_time_until_neglible;
+            s -= j->second.kon_time_until_neglible;
         else
-            s -= (long)(j->second.kon_time_until_neglible / 2);
+            s -= (j->second.kon_time_until_neglible / 2);
 
         MIDIchannel::activenotemap_t::const_iterator
         k = Ch[j->first.MidCh].activenotes.find(j->first.note);
@@ -2016,7 +2106,7 @@ long OPNMIDIplay::CalculateAdlChannelGoodness(size_t c, uint16_t ins, uint16_t) 
             }
 
             // Percussion is inferior to melody
-            s += 50 * (k->second.midiins / 128);
+            s += 50 * (int64_t)(k->second.midiins / 128);
             /*
                     if(k->second.midiins >= 25
                     && k->second.midiins < 40
@@ -2499,12 +2589,12 @@ retry_arpeggio:
 //        if(ains.tone)
 //        {
 //            /*if(ains.tone < 20)
-//                    std::sprintf(ToneIndication, "+%-2d", ains.tone);
+//                    snprintf(ToneIndication, 8, "+%-2d", ains.tone);
 //                else*/
 //            if(ains.tone < 128)
-//                std::sprintf(ToneIndication, "=%-2d", ains.tone);
+//                snprintf(ToneIndication, 8, "=%-2d", ains.tone);
 //            else
-//                std::sprintf(ToneIndication, "-%-2d", ains.tone - 128);
+//                snprintf(ToneIndication, 8, "-%-2d", ains.tone - 128);
 //        }
 //        std::printf("%s%s%s%u\t",
 //                    ToneIndication,

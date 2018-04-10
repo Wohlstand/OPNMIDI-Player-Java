@@ -72,6 +72,7 @@ public class Player extends AppCompatActivity {
     private String              m_lastFile = "";
     private String              m_lastPath = Environment.getExternalStorageDirectory().getPath();
     private boolean             m_ADL_scalable = false;
+    private boolean             m_ADL_fullRangeBrightness = false;
     private boolean             m_ADL_logvolumes = false;
     private int                 m_adl_numChips = 2;
     private int                 m_ADL_num4opChannels = 7;
@@ -93,6 +94,7 @@ public class Player extends AppCompatActivity {
 
         m_lastPath              = m_setup.getString("lastPath", m_lastPath);
         m_ADL_scalable          = m_setup.getBoolean("flagScalable", m_ADL_scalable);
+        m_ADL_fullRangeBrightness = m_setup.getBoolean("flagFullRangeBrightness", m_ADL_fullRangeBrightness);
         m_ADL_logvolumes        = m_setup.getBoolean("flagLogVolumes", m_ADL_logvolumes);
         m_adl_numChips          = m_setup.getInt("numChips", m_adl_numChips);
         m_ADL_volumeModel       = m_setup.getInt("volumeModel", m_ADL_volumeModel);
@@ -213,10 +215,26 @@ public class Player extends AppCompatActivity {
                            adl_setScaleModulators(MIDIDevice, m_ADL_scalable ? 1 : 0);
                        m_setup.edit().putBoolean("flagScalable", m_ADL_scalable).apply();
                        Toast toast = Toast.makeText(getApplicationContext(),
-                               "Scalabme modulation toggled toggled!", Toast.LENGTH_SHORT);
+                               "Scalable modulation toggled toggled!", Toast.LENGTH_SHORT);
                        toast.show();
                    }
                }
+        );
+
+        CheckBox fullRangeBrightness = (CheckBox)findViewById(R.id.fullRangeBrightness);
+        fullRangeBrightness.setChecked(m_ADL_fullRangeBrightness);
+        fullRangeBrightness.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                                                   @Override
+                                                   public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                                                       m_ADL_fullRangeBrightness = isChecked;
+                                                       if(MIDIDevice != 0)
+                                                           adl_setFullRangeBrightness(MIDIDevice, m_ADL_fullRangeBrightness ? 1 : 0);
+                                                       m_setup.edit().putBoolean("flagFullRangeBrightness", m_ADL_fullRangeBrightness).apply();
+                                                       Toast toast = Toast.makeText(getApplicationContext(),
+                                                               "Full-range brightness toggled!", Toast.LENGTH_SHORT);
+                                                       toast.show();
+                                                   }
+                                               }
         );
 
 //        CheckBox adlDrums = (CheckBox)findViewById(R.id.adlibDrumsMode);
@@ -442,7 +460,7 @@ public class Player extends AppCompatActivity {
         adl_setLogarithmicVolumes(MIDIDevice, m_ADL_logvolumes ? 1 : 0);
         adl_setVolumeRangeModel(MIDIDevice, m_ADL_volumeModel);
         adl_setLoopEnabled(MIDIDevice, 1);
-        adl_openBankFile(MIDIDevice, "/sdcard/gm.wopn");
+        adl_openBankFile(MIDIDevice, "/sdcard/xg.wopn");
     }
 
     public void OnPlayClick(View view)
@@ -593,6 +611,13 @@ public class Player extends AppCompatActivity {
 //    extern void adl_setScaleModulators(struct ADL_MIDIPlayer* device, int smod);
 //
     public native void adl_setScaleModulators(long device, int smod);
+
+    /*Enable(1) or Disable(0) full-range brightness (MIDI CC74 used in XG music to filter result sounding) scaling.
+    By default, brightness affects sound between 0 and 64.
+    When this option is enabled, the range will use a full range from 0 up to 127.
+*/
+    public native void adl_setFullRangeBrightness(long device, int fr_brightness);
+
 ///*Enable or disable built-in loop (built-in loop supports 'loopStart' and 'loopEnd' tags to loop specific part)*/
 //    extern void adl_setLoopEnabled(struct ADL_MIDIPlayer* device, int loopEn);
 //

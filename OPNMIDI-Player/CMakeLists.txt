@@ -9,7 +9,8 @@ cmake_minimum_required(VERSION 3.4.1)
 # You can define multiple libraries, and CMake builds it for you.
 # Gradle automatically packages shared libraries with your APK.
 
-add_definitions(-DUSE_LEGACY_EMULATOR)
+# It is very accurate, but TOOO heavy for mobile device
+add_definitions(-DOPNMIDI_DISABLE_NUKED_EMULATOR)
 
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Os -s -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,-s")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Os -s -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,-s")
@@ -34,7 +35,11 @@ add_library( # Sets the name of the library.
              src/main/cpp/src/opnmidi_private.cpp
              src/main/cpp/src/opnmidi_xmi2mid.c
              src/main/cpp/src/opnmidi_mus2mid.c
-             src/main/cpp/src/Ym2612_ChipEmu.cpp
+             src/main/cpp/src/chips/opn_chip_base.cpp
+             src/main/cpp/src/chips/mame_opn2.cpp
+             src/main/cpp/src/chips/mame/mame_ym2612fm.c
+             src/main/cpp/src/chips/gens_opn2.cpp
+             src/main/cpp/src/chips/gens/Ym2612_Emu.cpp
              src/main/cpp/native-lib.cpp )
 
 target_include_directories(native-lib PUBLIC src/main/cpp/include)

@@ -2,7 +2,7 @@
  * libADLMIDI is a free MIDI to WAV conversion library with OPL3 emulation
  *
  * Original ADLMIDI code: Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
- * ADLMIDI Library API:   Copyright (c) 2017 Vitaly Novichkov <admin@wohlnet.ru>
+ * ADLMIDI Library API:   Copyright (c) 2017-2018 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
  * http://iki.fi/bisqwit/source/adlmidi.html
@@ -23,10 +23,6 @@
 
 #ifndef ADLMIDI_PRIVATE_HPP
 #define ADLMIDI_PRIVATE_HPP
-
-#ifndef OPNMIDI_VERSION
-#define OPNMIDI_VERSION "1.0"
-#endif
 
 // Setup compiler defines useful for exporting required public API symbols in gme.cpp
 #ifndef OPNMIDI_EXPORT
@@ -53,10 +49,13 @@ typedef __int32 ssize_t;
 #   include <windows.h>
 #endif
 
+#ifdef USE_LEGACY_EMULATOR // Kept for a backward compatibility
+#define OPNMIDI_USE_LEGACY_EMULATOR
+#endif
+
 #include <vector>
 #include <list>
 #include <string>
-#include <sstream>
 #include <map>
 #include <set>
 #include <cstdlib>
@@ -78,12 +77,15 @@ typedef __int32 ssize_t;
 #include <deque>
 #include <algorithm>
 
-#include "fraction.hpp"
-#ifdef USE_LEGACY_EMULATOR
-#include "Ym2612_ChipEmu.h"
-#else
-#include "ym3438.h"
+#ifdef _MSC_VER
+#pragma warning(disable:4244)
+#pragma warning(disable:4267)
+#pragma warning(disable:4146)
 #endif
+
+
+#include "fraction.hpp"
+#include "chips/opn_chip_base.h"
 
 #include "opnbank.h"
 #include "opnmidi.h"
@@ -109,9 +111,11 @@ public:
 
     void reset(PTR *p = NULL)
     {
-        if(m_p)
-            free(m_p);
-        m_p = p;
+        if(p != m_p) {
+            if(m_p)
+                free(m_p);
+            m_p = p;
+        }
     }
 
     PTR *get()
@@ -126,6 +130,77 @@ public:
     {
         return m_p;
     }
+private:
+    AdlMIDI_CPtr(const AdlMIDI_CPtr &);
+    AdlMIDI_CPtr &operator=(const AdlMIDI_CPtr &);
+};
+
+/*
+    Shared pointer with non-atomic counter
+    FAQ: Why not std::shared_ptr? Because of Android NDK now doesn't supports it
+*/
+template<class VALUE>
+class AdlMIDI_SPtr
+{
+    VALUE *m_p;
+    size_t *m_counter;
+public:
+    AdlMIDI_SPtr() : m_p(NULL), m_counter(NULL) {}
+    ~AdlMIDI_SPtr()
+    {
+        reset(NULL);
+    }
+
+    AdlMIDI_SPtr(const AdlMIDI_SPtr &other)
+        : m_p(other.m_p), m_counter(other.m_counter)
+    {
+        if(m_counter)
+            ++*m_counter;
+    }
+
+    AdlMIDI_SPtr &operator=(const AdlMIDI_SPtr &other)
+    {
+        reset();
+        m_p = other.m_p;
+        m_counter = other.m_counter;
+        if(m_counter)
+            ++*m_counter;
+        return *this;
+    }
+
+    void reset(VALUE *p = NULL)
+    {
+        if(p != m_p) {
+            if(m_p && --*m_counter == 0)
+                delete m_p;
+            m_p = p;
+            if(!p) {
+                if(m_counter) {
+                    delete m_counter;
+                    m_counter = NULL;
+                }
+            }
+            else
+            {
+                if(!m_counter)
+                    m_counter = new size_t;
+                *m_counter = 1;
+            }
+        }
+    }
+
+    VALUE *get()
+    {
+        return m_p;
+    }
+    VALUE &operator*()
+    {
+        return *m_p;
+    }
+    VALUE *operator->()
+    {
+        return m_p;
+    }
 };
 
 class OPNMIDIplay;
@@ -135,11 +210,7 @@ public:
     friend class OPNMIDIplay;
     uint32_t NumChannels;
     char ____padding[4];
-#ifdef USE_LEGACY_EMULATOR
-    std::vector<OPNMIDI_Ym2612_Emu*> cardsOP2;
-#else
-    std::vector<ym3438_t*> cardsOP2;
-#endif
+    std::vector<AdlMIDI_SPtr<OPNChipBase > > cardsOP2;
 private:
     std::vector<size_t>     ins; // index to adl[], cached, needed by Touch()
     std::vector<uint8_t>    pit;  // value poked to B0, cached, needed by NoteOff)(
@@ -209,7 +280,7 @@ public:
     void Silence();
     void ChangeVolumeRangesModel(OPNMIDI_VolumeModels volumeModel);
     void ClearChips();
-    void Reset(unsigned long PCM_RATE);
+    void Reset(int emulator, unsigned long PCM_RATE);
 };
 
 
@@ -245,11 +316,14 @@ struct MIDIEventHooks
 
 class OPNMIDIplay
 {
+    friend void opn2_reset(struct OPN2_MIDIPlayer*);
 public:
-    OPNMIDIplay();
+    OPNMIDIplay(unsigned long sampleRate = 22050);
 
     ~OPNMIDIplay()
     {}
+
+    void applySetup();
 
     /**********************Internal structures and classes**********************/
 
@@ -449,7 +523,7 @@ public:
             patch = 0;
             volume  = 100;
             expression = 127;
-            panning = 0x30;
+            panning = 0xC0;
             vibrato = 0;
             sustain = 0;
             bend = 0.0;
@@ -509,6 +583,7 @@ public:
         void AddAge(int64_t ms);
     };
 
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
     /**
      * @brief MIDI Event utility container
      */
@@ -633,9 +708,11 @@ public:
         PositionNew(): began(false), wait(0.0), absTimePosition(0.0), track()
         {}
     };
+#endif //OPNMIDI_DISABLE_MIDI_SEQUENCER
 
     struct Setup
     {
+        int     emulator;
         unsigned int OpnBank;
         unsigned int NumCards;
         unsigned int LogarithmicVolumes;
@@ -643,6 +720,7 @@ public:
         //unsigned int SkipForward;
         bool    loopingIsEnabled;
         int     ScaleModulators;
+        bool    fullRangeBrightnessCC74;
 
         double delay;
         double carry;
@@ -653,9 +731,7 @@ public:
         double maxdelay;
 
         /* For internal usage */
-        ssize_t stored_samples; /* num of collected samples */
-        short   backup_samples[1024]; /* Backup sample storage. */
-        ssize_t backup_samples_size; /* Backup sample storage. */
+        ssize_t tick_skip_samples_delay; /* Skip tick processing after samples count. */
         /* For internal usage */
 
         unsigned long PCM_RATE;
@@ -678,6 +754,8 @@ private:
     std::map<uint64_t /*track*/, uint64_t /*channel begin index*/> current_device;
 
     std::vector<OpnChannel> ch;
+
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
     std::vector<std::vector<uint8_t> > TrackData;
 
     PositionNew CurrentPositionNew, LoopBeginPositionNew, trackBeginPositionNew;
@@ -691,13 +769,16 @@ private:
     double loopStartTime;
     //! Loop end time
     double loopEndTime;
+#endif
     //! Local error string
     std::string errorString;
     //! Local error string
     std::string errorStringOut;
 
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
     //! Pre-processed track data storage
     std::vector<MidiTrackQueue > trackDataNew;
+#endif
 
     //! Missing instruments catches
     std::set<uint8_t> caugh_missing_instruments;
@@ -706,6 +787,7 @@ private:
     //! Missing percussion banks catches
     std::set<uint16_t> caugh_missing_banks_percussion;
 
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
     /**
      * @brief Build MIDI track data from the raw track data storage
      * @return true if everything successfully processed, or false on any error
@@ -720,12 +802,14 @@ private:
      * @return Parsed MIDI event entry
      */
     MidiEvent parseEvent(uint8_t **ptr, uint8_t *end, int &status);
+#endif
 
 public:
 
     const std::string &getErrorString();
     void setErrorString(const std::string &err);
 
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
     std::string musTitle;
     std::string musCopyright;
     std::vector<std::string> musTrackTitles;
@@ -739,6 +823,7 @@ public:
             loopEnd,
             invalidLoop; /*Loop points are invalid (loopStart after loopEnd or loopStart and loopEnd are on same place)*/
     char ____padding2[2];
+#endif
     OPN2 opn;
 
     int16_t outBuf[1024];
@@ -767,6 +852,7 @@ public:
     bool LoadBank(const void *data, size_t size);
     bool LoadBank(fileReader &fr);
 
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
     bool LoadMIDI(const std::string &filename);
     bool LoadMIDI(const void *data, size_t size);
     bool LoadMIDI(fileReader &fr);
@@ -778,7 +864,15 @@ public:
      * @return desired number of seconds until next call
      */
     double Tick(double s, double granularity);
+#endif
 
+    /**
+     * @brief Process extra iterators like vibrato or arpeggio
+     * @param s seconds since last call
+     */
+    void   TickIteratos(double s);
+
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
     /**
      * @brief Change current position to specified time position in seconds
      * @param seconds Absolute time position in seconds
@@ -819,6 +913,7 @@ public:
      * @param tempo Tempo multiplier: 1.0 - original tempo. >1 - faster, <1 - slower
      */
     void    setTempo(double tempo);
+#endif
 
     /* RealTime event triggers */
     void realTime_ResetState();
@@ -850,19 +945,24 @@ private:
         Upd_Volume = 0x4,
         Upd_Pitch  = 0x8,
         Upd_All    = Upd_Pan + Upd_Volume + Upd_Pitch,
-        Upd_Off    = 0x20
+        Upd_Off    = 0x20,
+        Upd_Mute   = 0x40,
+        Upd_OffMute = Upd_Off + Upd_Mute
     };
 
     void NoteUpdate(uint16_t MidCh,
                     MIDIchannel::activenoteiterator i,
                     unsigned props_mask,
                     int32_t select_adlchn = -1);
+
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
     bool ProcessEventsNew(bool isSeek = false);
     void HandleEvent(size_t tk, const MidiEvent &evt, int &status);
+#endif
 
     // Determine how good a candidate this adlchannel
     // would be for playing a note from this instrument.
-    long CalculateAdlChannelGoodness(size_t c, uint16_t ins, uint16_t /*MidCh*/) const;
+    int64_t CalculateAdlChannelGoodness(size_t c, uint16_t ins, uint16_t /*MidCh*/) const;
 
     // A new note will be played on this channel using this instrument.
     // Kill existing notes on this channel (or don't, if we do arpeggio)

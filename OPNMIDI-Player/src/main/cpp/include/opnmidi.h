@@ -2,7 +2,7 @@
  * libOPNMIDI is a free MIDI to WAV conversion library with OPN2 (YM2612) emulation
  *
  * MIDI parser and player (Original code from ADLMIDI): Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
- * OPNMIDI Library and YM2612 support:   Copyright (c) 2017 Vitaly Novichkov <admin@wohlnet.ru>
+ * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2018 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
  * http://iki.fi/bisqwit/source/adlmidi.html
@@ -28,19 +28,30 @@
 extern "C" {
 #endif
 
+#define OPNMIDI_VERSION_MAJOR       1
+#define OPNMIDI_VERSION_MINOR       2
+#define OPNMIDI_VERSION_PATCHLEVEL  0
+
+#define OPNMIDI_TOSTR_I(s) #s
+#define OPNMIDI_TOSTR(s) OPNMIDI_TOSTR_I(s)
+#define OPNMIDI_VERSION \
+        OPNMIDI_TOSTR(OPNMIDI_VERSION_MAJOR) "." \
+        OPNMIDI_TOSTR(OPNMIDI_VERSION_MINOR) "." \
+        OPNMIDI_TOSTR(OPNMIDI_VERSION_PATCHLEVEL)
+
 #include <stddef.h>
 
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
 #include <stdint.h>
 typedef uint8_t         OPN2_UInt8;
-typedef uint16_t        OPN2_Uint16;
-typedef int8_t          OPN2_Sint8;
-typedef int16_t         OPN2_Sint16;
+typedef uint16_t        OPN2_UInt16;
+typedef int8_t          OPN2_SInt8;
+typedef int16_t         OPN2_SInt16;
 #else
 typedef unsigned char   OPN2_UInt8;
-typedef unsigned short  OPN2_Uint16;
-typedef char            OPN2_Sint8;
-typedef short           OPN2_Sint16;
+typedef unsigned short  OPN2_UInt16;
+typedef char            OPN2_SInt8;
+typedef short           OPN2_SInt16;
 #endif
 
 enum OPNMIDI_VolumeModels
@@ -58,7 +69,7 @@ struct OPN2_MIDIPlayer
     void *opn2_midiPlayer;
 };
 
-//DEPRECATED
+/* DEPRECATED */
 #define opn2_setNumCards opn2_setNumChips
 
 /* Sets number of emulated sound cards (from 1 to 100). Emulation of multiple sound cards exchanges polyphony limits*/
@@ -70,27 +81,56 @@ extern int  opn2_getNumChips(struct OPN2_MIDIPlayer *device);
 /*Enable or disable Enables scaling of modulator volumes*/
 extern void opn2_setScaleModulators(struct OPN2_MIDIPlayer *device, int smod);
 
+/*Enable(1) or Disable(0) full-range brightness (MIDI CC74 used in XG music to filter result sounding) scaling.
+    By default, brightness affects sound between 0 and 64.
+    When this option is enabled, the range will use a full range from 0 up to 127.
+*/
+extern void opn2_setFullRangeBrightness(struct OPN2_MIDIPlayer *device, int fr_brightness);
+
 /*Enable or disable built-in loop (built-in loop supports 'loopStart' and 'loopEnd' tags to loop specific part)*/
 extern void opn2_setLoopEnabled(struct OPN2_MIDIPlayer *device, int loopEn);
 
-/*Enable or disable Logariphmic volume changer */
+/*Enable or disable Logariphmic volume changer (-1 sets default per bank, 0 disable, 1 enable) */
 extern void opn2_setLogarithmicVolumes(struct OPN2_MIDIPlayer *device, int logvol);
 
 /*Set different volume range model */
 extern void opn2_setVolumeRangeModel(struct OPN2_MIDIPlayer *device, int volumeModel);
 
-/*Load WOPN bank file from File System*/
+/*Load WOPN bank file from File System. Is recommended to call adl_reset() to apply changes to already-loaded file player or real-time.*/
 extern int opn2_openBankFile(struct OPN2_MIDIPlayer *device, const char *filePath);
 
 /*Load WOPN bank file from memory data*/
 extern int opn2_openBankData(struct OPN2_MIDIPlayer *device, const void *mem, long size);
 
 
-/*Returns chip emulator name string*/
+/* DEPRECATED */
 extern const char *opn2_emulatorName();
+
+/*Returns chip emulator name string*/
+extern const char *opn2_chipEmulatorName(struct OPN2_MIDIPlayer *device);
+
+enum Opn2_Emulator
+{
+    OPNMIDI_EMU_MAME = 0,
+    OPNMIDI_EMU_NUKED,
+    OPNMIDI_EMU_GENS,
+    OPNMIDI_EMU_end
+};
+
+/* Switch the emulation core */
+extern int opn2_switchEmulator(struct OPN2_MIDIPlayer *device, int emulator);
+
+typedef struct {
+    OPN2_UInt16 major;
+    OPN2_UInt16 minor;
+    OPN2_UInt16 patch;
+} OPN2_Version;
 
 /*Returns string which contains a version number*/
 extern const char *opn2_linkedLibraryVersion();
+
+/*Returns structure which contains a version number of library */
+extern const OPN2_Version *opn2_linkedVersion();
 
 /*Returns string which contains last error message*/
 extern const char *opn2_errorString();
@@ -161,7 +201,7 @@ struct Opn2_MarkerEntry
 extern size_t opn2_metaMarkerCount(struct OPN2_MIDIPlayer *device);
 
 /*Returns the marker entry*/
-extern const struct Opn2_MarkerEntry opn2_metaMarker(struct OPN2_MIDIPlayer *device, size_t index);
+extern struct Opn2_MarkerEntry opn2_metaMarker(struct OPN2_MIDIPlayer *device, size_t index);
 
 
 
@@ -169,7 +209,7 @@ extern const struct Opn2_MarkerEntry opn2_metaMarker(struct OPN2_MIDIPlayer *dev
 /*Take a sample buffer and iterate MIDI timers */
 extern int  opn2_play(struct OPN2_MIDIPlayer *device, int sampleCount, short out[]);
 
-/*Generate audio output from chip emulators without iteration of MIDI timers. 512 samples per channel is a maximum*/
+/*Generate audio output from chip emulators without iteration of MIDI timers.*/
 extern int  opn2_generate(struct OPN2_MIDIPlayer *device, int sampleCount, short *out);
 
 /**
@@ -187,8 +227,43 @@ extern double opn2_tickEvents(struct OPN2_MIDIPlayer *device, double seconds, do
 /*Returns 1 if music position has reached end*/
 extern int opn2_atEnd(struct OPN2_MIDIPlayer *device);
 
+/**RealTime**/
+
 /*Force Off all notes on all channels*/
 extern void opn2_panic(struct OPN2_MIDIPlayer *device);
+
+/*Reset states of all controllers on all MIDI channels*/
+extern void opn2_rt_resetState(struct OPN2_MIDIPlayer *device);
+
+/*Turn specific MIDI note ON*/
+extern int opn2_rt_noteOn(struct OPN2_MIDIPlayer *device, OPN2_UInt8 channel, OPN2_UInt8 note, OPN2_UInt8 velocity);
+
+/*Turn specific MIDI note OFF*/
+extern void opn2_rt_noteOff(struct OPN2_MIDIPlayer *device, OPN2_UInt8 channel, OPN2_UInt8 note);
+
+/*Set note after-touch*/
+extern void opn2_rt_noteAfterTouch(struct OPN2_MIDIPlayer *device, OPN2_UInt8 channel, OPN2_UInt8 note, OPN2_UInt8 atVal);
+/*Set channel after-touch*/
+extern void opn2_rt_channelAfterTouch(struct OPN2_MIDIPlayer *device, OPN2_UInt8 channel, OPN2_UInt8 atVal);
+
+/*Apply controller change*/
+extern void opn2_rt_controllerChange(struct OPN2_MIDIPlayer *device, OPN2_UInt8 channel, OPN2_UInt8 type, OPN2_UInt8 value);
+
+/*Apply patch change*/
+extern void opn2_rt_patchChange(struct OPN2_MIDIPlayer *device, OPN2_UInt8 channel, OPN2_UInt8 patch);
+
+/*Apply pitch bend change*/
+extern void opn2_rt_pitchBend(struct OPN2_MIDIPlayer *device, OPN2_UInt8 channel, OPN2_UInt16 pitch);
+/*Apply pitch bend change*/
+extern void opn2_rt_pitchBendML(struct OPN2_MIDIPlayer *device, OPN2_UInt8 channel, OPN2_UInt8 msb, OPN2_UInt8 lsb);
+
+/*Change LSB of the bank*/
+extern void opn2_rt_bankChangeLSB(struct OPN2_MIDIPlayer *device, OPN2_UInt8 channel, OPN2_UInt8 lsb);
+/*Change MSB of the bank*/
+extern void opn2_rt_bankChangeMSB(struct OPN2_MIDIPlayer *device, OPN2_UInt8 channel, OPN2_UInt8 msb);
+/*Change bank by absolute signed value*/
+extern void opn2_rt_bankChange(struct OPN2_MIDIPlayer *device, OPN2_UInt8 channel, OPN2_SInt16 bank);
+
 
 /**Hooks**/
 

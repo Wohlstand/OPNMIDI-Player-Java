@@ -231,8 +231,7 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1errorString(JNIEnv *env, jobject inst
 JNIEXPORT jstring JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_stringFromJNI(JNIEnv *env, jobject /* this */)
 {
-    std::string hello = opn2_emulatorName();
-    hello += " OPN2 Emulator is ready";
+    std::string hello = "OPN2 Emulator is ready";
     return env->NewStringUTF(hello.c_str());
 }
 
@@ -259,6 +258,16 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setScaleModulators(JNIEnv *env, jobje
     opn2_setScaleModulators(ADLDEV, (int)smod);
     pthread_mutex_unlock(&g_lock);
 }
+
+JNIEXPORT void JNICALL
+Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setFullRangeBrightness(JNIEnv *env, jobject instance,
+                                                              jlong device, jint fr_brightness)
+{
+    pthread_mutex_lock(&g_lock);
+    opn2_setFullRangeBrightness(ADLDEV, (int)fr_brightness);
+    pthread_mutex_unlock(&g_lock);
+}
+
 
 JNIEXPORT void JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setLoopEnabled(JNIEnv *env, jobject instance,

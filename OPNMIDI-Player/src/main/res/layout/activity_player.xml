@@ -58,29 +58,30 @@
         android:layout_toRightOf="@+id/playPause"
         android:layout_toEndOf="@+id/playPause" />
 
-    <CheckBox
-        android:text="@string/scalemod"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/openFile"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:id="@+id/scalableModulation"
-        tools:text="@string/scalemod"
-        android:layout_toLeftOf="@+id/restart"
-        android:layout_toStartOf="@+id/restart" />
+        <CheckBox
+            android:id="@+id/scalableModulation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"
+            android:layout_below="@+id/openFile"
+            android:text="@string/scalemod"
+            tools:text="@string/scalemod"
+        />
 
-    <CheckBox
-        android:text="@string/adlibdrums"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/scalableModulation"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:id="@+id/adlibDrumsMode"
-        tools:text="@string/adlibdrums"
-        android:layout_alignRight="@+id/scalableModulation"
-        android:layout_alignEnd="@+id/scalableModulation" />
+        <CheckBox
+            android:id="@+id/fullRangeBrightness"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignEnd="@+id/scalableModulation"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"
+            android:layout_alignRight="@+id/scalableModulation"
+            android:layout_below="@+id/scalableModulation"
+            android:text="@string/fullrangebrightness"
+            tools:text="@string/fullrangebrightness" />
 
         <TextView
             android:text="@string/volumesModel"
@@ -168,15 +169,15 @@
             android:textStyle="normal|italic" />
 
         <CheckBox
-            android:text="@string/logvolumes"
+            android:id="@+id/logVols"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/adlibDrumsMode"
+            android:layout_alignEnd="@+id/fullRangeBrightness"
             android:layout_alignParentLeft="true"
             android:layout_alignParentStart="true"
-            android:id="@+id/logVols"
-            android:layout_alignRight="@+id/adlibDrumsMode"
-            android:layout_alignEnd="@+id/adlibDrumsMode" />
+            android:layout_alignRight="@+id/fullRangeBrightness"
+            android:layout_below="@+id/fullRangeBrightness"
+            android:text="@string/logvolumes" />
 
     </RelativeLayout>
 </ScrollView>

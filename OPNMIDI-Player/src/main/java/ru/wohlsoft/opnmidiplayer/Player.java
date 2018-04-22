@@ -28,6 +28,10 @@ import android.content.pm.PackageManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.app.ActivityCompat;
 import android.widget.Toast;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -445,22 +449,48 @@ public class Player extends AppCompatActivity {
 
     private void uninitPlayer()
     {
-        if(MIDIDevice>0)
+        if(MIDIDevice > 0)
         {
             adl_close(MIDIDevice);
             MIDIDevice = 0;
         }
     }
-    private void initPlayer()
-    {
+    private void initPlayer() {
         uninitPlayer();
         MIDIDevice = adl_init(44100);
         adl_setNumCards(MIDIDevice, m_adl_numChips);
         adl_setScaleModulators(MIDIDevice, m_ADL_scalable ? 1 : 0);
+        adl_setFullRangeBrightness(MIDIDevice, m_ADL_fullRangeBrightness ? 1 : 0);
         adl_setLogarithmicVolumes(MIDIDevice, m_ADL_logvolumes ? 1 : 0);
         adl_setVolumeRangeModel(MIDIDevice, m_ADL_volumeModel);
         adl_setLoopEnabled(MIDIDevice, 1);
-        adl_openBankFile(MIDIDevice, "/sdcard/xg.wopn");
+
+        File externalFile = new File("/sdcard/xg.wopn");
+        if(externalFile.exists())
+            adl_openBankFile(MIDIDevice, externalFile.getAbsolutePath());
+        else {
+            try {
+                InputStream is = getAssets().open("xg.wopn");
+                int size = is.available();
+                byte[] buffer = new byte[size];
+                is.read(buffer);
+                is.close();
+                if(adl_openBankData(MIDIDevice, buffer) < 0)
+                {
+                    AlertDialog.Builder b = new AlertDialog.Builder(this);
+                    b.setTitle("Damn!");
+                    b.setMessage("Can't open bank from resources: " + adl_errorInfo(MIDIDevice));
+                    b.setNegativeButton(android.R.string.ok, null);
+                    b.show();
+                }
+            } catch(IOException e) {
+                AlertDialog.Builder b = new AlertDialog.Builder(this);
+                b.setTitle("Damn!");
+                b.setMessage("Can't open bank from resources: " + e.getMessage());
+                b.setNegativeButton(android.R.string.ok, null);
+                b.show();
+            }
+        }
     }
 
     public void OnPlayClick(View view)
@@ -634,6 +664,10 @@ public class Player extends AppCompatActivity {
 ///*Returns string which contains last error message*/
 //    extern const char* adl_errorString();
     public native String adl_errorString();
+
+    // /*Returns string which contains last error message on specific device*/
+    //extern const char *opn2_errorInfo(struct OPN2_MIDIPlayer *device);
+    public native String adl_errorInfo(long device);
 
 //
 //    /*Initialize ADLMIDI Player device*/

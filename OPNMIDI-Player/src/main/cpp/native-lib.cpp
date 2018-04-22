@@ -229,6 +229,16 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1errorString(JNIEnv *env, jobject inst
 }
 
 JNIEXPORT jstring JNICALL
+Java_ru_wohlsoft_opnmidiplayer_Player_adl_1errorInfo(JNIEnv *env, jobject instance, jlong device) {
+
+    pthread_mutex_lock(&g_lock);
+    const char* adlMIDIerr = opn2_errorInfo(ADLDEV);
+    jstring ret = env->NewStringUTF(adlMIDIerr);
+    pthread_mutex_unlock(&g_lock);
+    return ret;
+}
+
+JNIEXPORT jstring JNICALL
 Java_ru_wohlsoft_opnmidiplayer_Player_stringFromJNI(JNIEnv *env, jobject /* this */)
 {
     std::string hello = "OPN2 Emulator is ready";

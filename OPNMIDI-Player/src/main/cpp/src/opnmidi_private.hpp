@@ -78,12 +78,27 @@ typedef __int32 ssize_t;
 #include <deque>
 #include <algorithm>
 
-#ifdef _MSC_VER
-#pragma warning(disable:4244)
-#pragma warning(disable:4267)
-#pragma warning(disable:4146)
+/*
+ * Workaround for some compilers are has no those macros in their headers!
+ */
+#ifndef INT8_MIN
+#define INT8_MIN    (-0x7f - 1)
 #endif
-
+#ifndef INT16_MIN
+#define INT16_MIN   (-0x7fff - 1)
+#endif
+#ifndef INT32_MIN
+#define INT32_MIN   (-0x7fffffff - 1)
+#endif
+#ifndef INT8_MAX
+#define INT8_MAX    0x7f
+#endif
+#ifndef INT16_MAX
+#define INT16_MAX   0x7fff
+#endif
+#ifndef INT32_MAX
+#define INT32_MAX   0x7fffffff
+#endif
 
 #include "fraction.hpp"
 #include "chips/opn_chip_base.h"
@@ -290,7 +305,6 @@ public:
     //! Carriers-only are scaled by default by volume level. This flag will tell to scale modulators too.
     bool ScaleModulators;
     //! Required to play CMF files. Can be turned on by using of "CMF" volume model
-    bool LogarithmicVolumes;
     char ___padding2[3];
 
     enum MusicMode
@@ -518,7 +532,7 @@ public:
         bool eof()
         {
             if(fp)
-                return std::feof(fp);
+                return (std::feof(fp) != 0);
             else
                 return mp_tell >= mp_size;
         }
@@ -536,9 +550,15 @@ public:
         uint8_t bank_lsb, bank_msb;
         uint8_t patch;
         uint8_t volume, expression;
-        uint8_t panning, vibrato, sustain;
+        uint8_t panning, vibrato, aftertouch, sustain;
+        //! Per note Aftertouch values
+        uint8_t noteAftertouch[128];
+        //! Is note aftertouch has any non-zero value
+        bool    noteAfterTouchInUse;
         char ____padding[6];
+        double bendSrc;
         double  bend, bendsense;
+        int bendsense_lsb, bendsense_msb;
         double  vibpos, vibspeed, vibdepth;
         int64_t vibdelay;
         uint8_t lastlrpn, lastmrpn;
@@ -551,10 +571,12 @@ public:
             bool active;
             // Current pressure
             uint8_t vol;
+            // Note vibrato (a part of Note Aftertouch feature)
+            uint8_t vibrato;
             char ____padding[1];
             // Tone selected on noteon:
             int16_t tone;
-            char ____padding2[4];
+            char ____padding2[10];
             // Patch selected on noteon; index to banks[AdlBank][]
             size_t  midiins;
             // Index to physical adlib data structure, adlins[]
@@ -616,9 +638,9 @@ public:
             }
             void phys_erase_at(const Phys *ph)
             {
-                unsigned pos = ph - chip_channels;
-                assert(pos < chip_channels_count);
-                for(unsigned i = pos + 1; i < chip_channels_count; ++i)
+                intptr_t pos = ph - chip_channels;
+                assert(pos < static_cast<intptr_t>(chip_channels_count));
+                for(intptr_t i = pos + 1; i < static_cast<intptr_t>(chip_channels_count); ++i)
                     chip_channels[i - 1] = chip_channels[i];
                 --chip_channels_count;
             }
@@ -707,7 +729,7 @@ public:
 
         void activenotes_clear()
         {
-            for(unsigned i = 0; i < 128; ++i) {
+            for(uint8_t i = 0; i < 128; ++i) {
                 activenotes[i].note = i;
                 activenotes[i].active = false;
             }
@@ -727,12 +749,18 @@ public:
         }
         void resetAllControllers()
         {
+            bendSrc = 0.0;
             bend = 0.0;
-            bendsense = 2 / 8192.0;
+            bendsense_msb = 2;
+            bendsense_lsb = 0;
+            updateBendSensitivity();
             volume  = 100;
             expression = 127;
             sustain = 0;
             vibrato = 0;
+            aftertouch = 0;
+            std::memset(noteAftertouch, 0, 128);
+            noteAfterTouchInUse = false;
             vibspeed = 2 * 3.141592653 * 5.0;
             vibdepth = 0.5 / 127;
             vibdelay = 0;
@@ -740,7 +768,16 @@ public:
             portamento = 0;
             brightness = 127;
         }
-
+        bool hasVibrato()
+        {
+            return (vibrato > 0) || (aftertouch > 0) || noteAfterTouchInUse;
+        }
+        void updateBendSensitivity()
+        {
+            int cent = bendsense_msb + static_cast<int>(static_cast<double>(bendsense_lsb) * (1.0 / 128.0));
+            bendsense = static_cast<double>(cent) / 8192.0;
+            bend = bendSrc * bendsense;
+        }
         MIDIchannel()
         {
             activenotes_clear();
@@ -801,11 +838,11 @@ public:
         }
 
         OpnChannel &operator=(const OpnChannel &oth)
-         {
-             koff_time_until_neglible = oth.koff_time_until_neglible;
-             users_assign(oth.users_first, oth.users_size);
-             return *this;
-         }
+        {
+            koff_time_until_neglible = oth.koff_time_until_neglible;
+            users_assign(oth.users_first, oth.users_size);
+            return *this;
+        }
 
         void AddAge(int64_t ms);
     };
@@ -981,6 +1018,8 @@ private:
     std::map<uint64_t /*track*/, uint64_t /*channel begin index*/> current_device;
 
     std::vector<OpnChannel> ch;
+    //! Counter of arpeggio processing
+    size_t m_arpeggioCounter;
 
 #ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
     std::vector<std::vector<uint8_t> > TrackData;

@@ -35,9 +35,10 @@ add_library( # Sets the name of the library.
              src/main/cpp/src/opnmidi_private.cpp
              src/main/cpp/src/opnmidi_xmi2mid.c
              src/main/cpp/src/opnmidi_mus2mid.c
-             src/main/cpp/src/chips/opn_chip_base.cpp
              src/main/cpp/src/chips/mame_opn2.cpp
              src/main/cpp/src/chips/mame/mame_ym2612fm.c
+             src/main/cpp/src/chips/gx_opn2.cpp
+             src/main/cpp/src/chips/gx/gx_ym2612.c
              src/main/cpp/src/chips/gens_opn2.cpp
              src/main/cpp/src/chips/gens/Ym2612_Emu.cpp
              src/main/cpp/native-lib.cpp )

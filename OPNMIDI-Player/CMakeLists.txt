@@ -3,20 +3,29 @@
 # value of 3.4.0 or lower.
 
 cmake_minimum_required(VERSION 3.4.1)
+project(OPNMIDI_JniBind C CXX)
 
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.
 # You can define multiple libraries, and CMake builds it for you.
 # Gradle automatically packages shared libraries with your APK.
 
-# It is very accurate, but TOOO heavy for mobile device
-add_definitions(-DOPNMIDI_DISABLE_NUKED_EMULATOR)
-
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Os -s -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,-s")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Os -s -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,-s")
 set(LINK_FLAGS_RELEASE "${LINK_FLAGS_RELEASE} -Wl,--gc-sections -Wl,-s")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-omit-frame-pointer")
+
+set(libOPNMIDI_SHARED OFF)
+set(libOPNMIDI_STATIC ON)
+set(USE_NUKED_EMULATOR OFF) # For now is no way to toggle emulator from UI, use DosBox only
+set(WITH_MIDIPLAY OFF)
+set(WITH_VLC_PLUGIN OFF)
+set(WITH_OLD_UTILS OFF)
+add_subdirectory(${OPNMIDI_JniBind_SOURCE_DIR}/src/main/cpp)
+
+add_library(OPNMIDI INTERFACE)
+target_link_libraries(OPNMIDI INTERFACE OPNMIDI_static)
 
 add_library( # Sets the name of the library.
              native-lib
@@ -27,23 +36,11 @@ add_library( # Sets the name of the library.
              # Provides a relative path to your source file(s).
              # Associated headers in the same location as their source
              # file are automatically included.
-             # file are automatically included.
-             src/main/cpp/src/opnmidi.cpp
-             src/main/cpp/src/opnmidi_load.cpp
-             src/main/cpp/src/opnmidi_midiplay.cpp
-             src/main/cpp/src/opnmidi_opn2.cpp
-             src/main/cpp/src/opnmidi_private.cpp
-             src/main/cpp/src/opnmidi_xmi2mid.c
-             src/main/cpp/src/opnmidi_mus2mid.c
-             src/main/cpp/src/chips/mame_opn2.cpp
-             src/main/cpp/src/chips/mame/mame_ym2612fm.c
-             src/main/cpp/src/chips/gx_opn2.cpp
-             src/main/cpp/src/chips/gx/gx_ym2612.c
-             src/main/cpp/src/chips/gens_opn2.cpp
-             src/main/cpp/src/chips/gens/Ym2612_Emu.cpp
              src/main/cpp/native-lib.cpp )
 
+target_link_libraries(native-lib OPNMIDI)
 target_include_directories(native-lib PUBLIC src/main/cpp/include)
+add_dependencies(native-lib OPNMIDI_static)
 
 # Searches for a specified prebuilt library and stores the path as a
 # variable. Because system libraries are included in the search path by

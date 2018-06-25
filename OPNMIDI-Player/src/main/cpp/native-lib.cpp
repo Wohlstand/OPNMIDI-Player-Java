@@ -246,7 +246,7 @@ Java_ru_wohlsoft_opnmidiplayer_Player_stringFromJNI(JNIEnv *env, jobject /* this
 }
 
 JNIEXPORT jint JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setNumCards(JNIEnv *env, jobject instance, jlong device,
+Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setNumChips(JNIEnv *env, jobject instance, jlong device,
                                                        jint numCards) {
     pthread_mutex_lock(&g_lock);
     jint ret = (jint)opn2_setNumChips(ADLDEV, (int)numCards);

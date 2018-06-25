@@ -458,7 +458,7 @@ public class Player extends AppCompatActivity {
     private void initPlayer() {
         uninitPlayer();
         MIDIDevice = adl_init(44100);
-        adl_setNumCards(MIDIDevice, m_adl_numChips);
+        adl_setNumChips(MIDIDevice, m_adl_numChips);
         adl_setRunAtPcmRate(MIDIDevice, 1); // Reduces CPU usage, BUT, also reduces sounding accuracy
         adl_setScaleModulators(MIDIDevice, m_ADL_scalable ? 1 : 0);
         adl_setFullRangeBrightness(MIDIDevice, m_ADL_fullRangeBrightness ? 1 : 0);
@@ -613,8 +613,8 @@ public class Player extends AppCompatActivity {
     public native void stopPlaying();
 
 //    /* Sets number of emulated sound cards (from 1 to 100). Emulation of multiple sound cards exchanges polyphony limits*/
-//    extern int adl_setNumCards(struct ADL_MIDIPlayer*device, int numCards);
-    public native int adl_setNumCards(long device, int numCards);
+//    extern int adl_setNumChips(struct ADL_MIDIPlayer*device, int numCards);
+    public native int adl_setNumChips(long device, int numChips);
 
 ///* Returns total number of available banks */
 //    extern int adl_getBanksCount();

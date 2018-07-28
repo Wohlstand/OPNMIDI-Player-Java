@@ -88,7 +88,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/volumeRangesModelLabel"
-            android:layout_below="@+id/logVols"
+            android:layout_below="@+id/fullRangeBrightness"
             android:layout_alignParentLeft="true"
             android:layout_alignParentStart="true"
             android:layout_alignParentRight="true"
@@ -167,17 +167,6 @@
             android:layout_alignTop="@+id/numChips"
             android:textAllCaps="false"
             android:textStyle="normal|italic" />
-
-        <CheckBox
-            android:id="@+id/logVols"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignEnd="@+id/fullRangeBrightness"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentStart="true"
-            android:layout_alignRight="@+id/fullRangeBrightness"
-            android:layout_below="@+id/fullRangeBrightness"
-            android:text="@string/logvolumes" />
 
     </RelativeLayout>
 </ScrollView>

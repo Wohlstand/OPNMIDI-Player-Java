@@ -11,7 +11,7 @@
     <string name="numChips">Number of emulated chips</string>
     <string name="num4opChans">Total number of 4-op channels</string>
     <string name="restart">Restart</string>
-    <string name="logvolumes">Logarophmic volumes</string>
+    <string name="logvolumes">Logarithmic volumes</string>
     <string name="volumesModel">Volume ranges model</string>
     <string name="vrmAuto">[Auto]</string>
     <string name="vrmGeneric">Generic</string>

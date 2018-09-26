@@ -62,6 +62,18 @@ function(set_legacy_standard destTarget)
         endif()
     endif()
 endfunction()
+
+function(set_visibility_hidden destTarget)
+    if(CMAKE_C_COMPILER_ID MATCHES "^(GNU|Clang)$" AND NOT DJGPP)
+        if(${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} VERSION_GREATER 3.2)
+            target_compile_options(${destTarget} PRIVATE
+              $<$<COMPILE_LANGUAGE:CXX>:-fvisibility-inlines-hidden> -fvisibility=hidden)
+        else()
+            target_compile_options(${destTarget} PRIVATE -fvisibility=hidden)
+        endif()
+        target_compile_definitions(${destTarget} PRIVATE -DLIBOPNMIDI_VISIBILITY)
+    endif()
+endfunction()
 #===========================================================================================
 
 option(libOPNMIDI_STATIC   "Build static library of libOPNMIDI" ON)
@@ -100,12 +112,14 @@ list(APPEND libOPNMIDI_SOURCES
     ${libOPNMIDI_SOURCE_DIR}/src/opnmidi_midiplay.cpp
     ${libOPNMIDI_SOURCE_DIR}/src/opnmidi_opn2.cpp
     ${libOPNMIDI_SOURCE_DIR}/src/opnmidi_private.cpp
+    ${libOPNMIDI_SOURCE_DIR}/src/wopn/wopn_file.c
 )
 
 if(WITH_MIDI_SEQUENCER)
     list(APPEND libOPNMIDI_SOURCES
         ${libOPNMIDI_SOURCE_DIR}/src/opnmidi_sequencer.cpp
     )
+    add_definitions(-DENABLE_END_SILENCE_SKIPPING)
 endif()
 
 if(NOT WITH_MUS_SUPPORT OR NOT WITH_MIDI_SEQUENCER)
@@ -174,6 +188,7 @@ if(libOPNMIDI_STATIC)
     set_target_properties(OPNMIDI_static PROPERTIES OUTPUT_NAME OPNMIDI)
     target_include_directories(OPNMIDI_static PUBLIC ${libOPNMIDI_SOURCE_DIR}/include)
     set_legacy_standard(OPNMIDI_static)
+    set_visibility_hidden(OPNMIDI_static)
     list(APPEND libOPNMIDI_INSTALLS OPNMIDI_static)
 endif()
 
@@ -182,7 +197,11 @@ if(libOPNMIDI_SHARED)
     set_target_properties(OPNMIDI_shared PROPERTIES OUTPUT_NAME OPNMIDI)
     target_include_directories(OPNMIDI_shared PUBLIC ${libOPNMIDI_SOURCE_DIR}/include)
     set_legacy_standard(OPNMIDI_shared)
+    set_visibility_hidden(OPNMIDI_shared)
     list(APPEND libOPNMIDI_INSTALLS OPNMIDI_shared)
+    if(WIN32)
+        target_compile_definitions(OPNMIDI_shared PRIVATE "-DOPNMIDI_BUILD_DLL")
+    endif()
 endif()
 
 if(NOT libOPNMIDI_STATIC AND NOT libOPNMIDI_SHARED)

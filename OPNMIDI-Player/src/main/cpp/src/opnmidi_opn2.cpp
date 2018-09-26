@@ -48,6 +48,48 @@
 #include "chips/gx_opn2.h"
 #endif
 
+static const unsigned opn2_emulatorSupport = 0
+#ifndef OPNMIDI_DISABLE_NUKED_EMULATOR
+    | (1u << OPNMIDI_EMU_NUKED)
+#endif
+#ifndef OPNMIDI_DISABLE_MAME_EMULATOR
+    | (1u << OPNMIDI_EMU_MAME)
+#endif
+#ifndef OPNMIDI_DISABLE_GENS_EMULATOR
+    | (1u << OPNMIDI_EMU_GENS)
+#endif
+#ifndef OPNMIDI_DISABLE_GX_EMULATOR
+    | (1u << OPNMIDI_EMU_GX)
+#endif
+;
+
+//! Check emulator availability
+bool opn2_isEmulatorAvailable(int emulator)
+{
+    return (opn2_emulatorSupport & (1u << (unsigned)emulator)) != 0;
+}
+
+//! Find highest emulator
+int opn2_getHighestEmulator()
+{
+    int emu = -1;
+    for(unsigned m = opn2_emulatorSupport; m > 0; m >>= 1)
+        ++emu;
+    return emu;
+}
+
+//! Find lowest emulator
+int opn2_getLowestEmulator()
+{
+    int emu = -1;
+    unsigned m = opn2_emulatorSupport;
+    if(m > 0)
+    {
+        for(emu = 0; (m & 1) == 0; m >>= 1)
+            ++emu;
+    }
+    return emu;
+}
 
 static const uint32_t g_noteChannelsMap[6] = { 0, 1, 2, 4, 5, 6 };
 
@@ -76,8 +118,14 @@ OPN2::OPN2() :
     m_regLFOSetup(0),
     m_numChips(1),
     m_musicMode(MODE_MIDI),
-    m_volumeScale(VOLUME_Generic)
+    m_volumeScale(VOLUME_Generic),
+    m_lfoEnable(false),
+    m_lfoFrequency(0)
 {
+    m_insBankSetup.volumeModel = OPN2::VOLUME_Generic;
+    m_insBankSetup.lfoEnable = false;
+    m_insBankSetup.lfoFrequency = 0;
+
     // Initialize blank instruments banks
     m_insBanks.clear();
 }
@@ -115,20 +163,49 @@ void OPN2::noteOn(size_t c, double hertz) // Hertz range: 0..131071
     size_t      ch4 = c % 6;
     getOpnChannel(c, chip, port, cc);
 
-    uint32_t x2 = 0x0000;
-
-    if(hertz < 0 || hertz > 262143) // Avoid infinite loop
+    if(hertz < 0) // Avoid infinite loop
         return;
 
-    while((hertz >= 1023.75) && (x2 < 0x3800))
+    uint32_t octave = 0, ftone = 0, mul_offset = 0;
+    const opnInstData &adli = m_insCache[c];
+
+    //Basic range until max of octaves reaching
+    while((hertz >= 1023.75) && (octave < 0x3800))
     {
         hertz /= 2.0;    // Calculate octave
-        x2 += 0x800;
+        octave += 0x800;
+    }
+    //Extended range, rely on frequency multiplication increment
+    while(hertz >= 2036.75)
+    {
+        hertz /= 2.0;    // Calculate octave
+        mul_offset++;
+    }
+    ftone = octave + static_cast<uint32_t>(hertz + 0.5);
+
+    for(size_t op = 0; op < 4; op++)
+    {
+        uint32_t reg = adli.OPS[op].data[0];
+        uint16_t address = 0x30 + (op * 4) + cc;
+        if(mul_offset > 0) // Increase frequency multiplication value
+        {
+            uint32_t dt  = reg & 0xF0;
+            uint32_t mul = reg & 0x0F;
+            if((mul + mul_offset) > 0x0F)
+            {
+                mul_offset = 0;
+                mul = 0x0F;
+            }
+            writeRegI(chip, port, address, uint8_t(dt | (mul + mul_offset)));
+        }
+        else
+        {
+            writeRegI(chip, port, address, uint8_t(reg));
+        }
     }
 
-    x2 += static_cast<uint32_t>(hertz + 0.5);
-    writeRegI(chip, port, 0xA4 + cc, (x2>>8) & 0xFF);//Set frequency and octave
-    writeRegI(chip, port, 0xA0 + cc, x2 & 0xFF);
+    writeRegI(chip, port, 0xA4 + cc, (ftone>>8) & 0xFF);//Set frequency and octave
+    writeRegI(chip, port, 0xA0 + cc, ftone & 0xFF);
     writeRegI(chip, 0, 0x28, 0xF0 + g_noteChannelsMap[ch4]);
 }
 
@@ -230,6 +307,14 @@ void OPN2::silenceAll() // Silence all OPL channels.
     }
 }
 
+void OPN2::commitLFOSetup()
+{
+    uint8_t regLFOSetup = (m_lfoEnable ? 8 : 0) | (m_lfoFrequency & 7);
+    m_regLFOSetup = regLFOSetup;
+    for(size_t chip = 0; chip < m_numChips; ++chip)
+        writeReg(chip, 0, 0x22, regLFOSetup);
+}
+
 void OPN2::setVolumeScaleModel(OPNMIDI_VolumeModels volumeModel)
 {
     switch(volumeModel)
@@ -259,6 +344,24 @@ void OPN2::setVolumeScaleModel(OPNMIDI_VolumeModels volumeModel)
     }
 }
 
+OPNMIDI_VolumeModels OPN2::getVolumeScaleModel()
+{
+    switch(m_volumeScale)
+    {
+    default:
+    case OPN2::VOLUME_Generic:
+        return OPNMIDI_VolumeModel_Generic;
+    case OPN2::VOLUME_NATIVE:
+        return OPNMIDI_VolumeModel_NativeOPN2;
+    case OPN2::VOLUME_DMX:
+        return OPNMIDI_VolumeModel_DMX;
+    case OPN2::VOLUME_APOGEE:
+        return OPNMIDI_VolumeModel_APOGEE;
+    case OPN2::VOLUME_9X:
+        return OPNMIDI_VolumeModel_9X;
+    }
+}
+
 void OPN2::clearChips()
 {
     for(size_t i = 0; i < m_chips.size(); i++)
@@ -283,6 +386,8 @@ void OPN2::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
         switch(emulator)
         {
         default:
+            assert(false);
+            abort();
 #ifndef OPNMIDI_DISABLE_MAME_EMULATOR
         case OPNMIDI_EMU_MAME:
             chip = new MameOPN2;
@@ -318,9 +423,12 @@ void OPN2::reset(int emulator, unsigned long PCM_RATE, void *audioTickHandler)
     m_insCache.resize(m_numChannels,   m_emptyInstrument.opn[0]);
     m_regLFOSens.resize(m_numChannels,    0);
 
+    uint8_t regLFOSetup = (m_lfoEnable ? 8 : 0) | (m_lfoFrequency & 7);
+    m_regLFOSetup = regLFOSetup;
+
     for(size_t card = 0; card < m_numChips; ++card)
     {
-        writeReg(card, 0, 0x22, m_regLFOSetup);//push current LFO state
+        writeReg(card, 0, 0x22, regLFOSetup);//push current LFO state
         writeReg(card, 0, 0x27, 0x00);  //set Channel 3 normal mode
         writeReg(card, 0, 0x2B, 0x00);  //Disable DAC
         //Shut up all channels

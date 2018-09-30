@@ -3,8 +3,6 @@ Implementation of OPNMIDI based MIDI-player for Android
 
 It's a MIDI-player based on emulator of a Frequency Modulation chip Yamaha OPN2 (YM2612). This small MIDI-player made with using of [libOPNMIDI](https://github.com/Wohlstand/libOPNMIDI/) library.
 
-**It's experimental! To have it working you must put the gm.wopn file into your /sdcard/ root folder (gm.wopn file you can take [here](https://github.com/Wohlstand/libOPNMIDI/blob/master/fm_banks/gm.wopn))**
-
 # Key features
 
 * OPN2 emulation
@@ -49,5 +47,5 @@ https://github.com/Wohlstand/OPNMIDI-Player-Java/releases
 
 * This application audio playback may lag on various devices, therefore you can reduce number of emulated chips
 
-More detailed about playing MIDI with this application you also can find on [libOPNMIDI library repo](git@github.com:Wohlstand/libOPNMIDI.git)
+More detailed about playing MIDI with this application you also can find on [libOPNMIDI library repo](https://github.com/Wohlstand/libOPNMIDI/)
 

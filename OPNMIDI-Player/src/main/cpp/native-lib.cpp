@@ -1,8 +1,9 @@
 #include <jni.h>
-#include <string>
+#include <pthread.h>
 #include <assert.h>
 #include <memory.h>
 #include <opnmidi.h>
+#include <string>
 
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
@@ -10,7 +11,16 @@
 pthread_mutex_t g_lock;
 bool mutex_created = false;
 
-typedef int (*AndroidAudioCallback)(short *buffer, int num_samples);
+typedef int16_t sample_t;
+
+static OPNMIDI_AudioFormat g_audioFormat
+{
+    OPNMIDI_SampleType_S16,
+    sizeof(sample_t),
+    sizeof(sample_t) * 2
+};
+
+typedef int (*AndroidAudioCallback)(sample_t *buffer, int num_samples);
 bool OpenSLWrap_Init(AndroidAudioCallback cb);
 void OpenSLWrap_Shutdown();
 
@@ -44,14 +54,16 @@ static SLPlayItf    bqPlayerPlay;
 static SLAndroidSimpleBufferQueueItf    bqPlayerBufferQueue;
 static SLMuteSoloItf                    bqPlayerMuteSolo;
 static SLVolumeItf                      bqPlayerVolume;
-#define BUFFER_SIZE 40960
+#define BUFFER_SIZE 20480
 #define BUFFER_SIZE_IN_SAMPLES (BUFFER_SIZE / 2)
 
 // Double buffering.
 static int      bufferLen[2] = {0, 0};
-static short    buffer[2][BUFFER_SIZE_IN_SAMPLES];
+static sample_t buffer[2][BUFFER_SIZE_IN_SAMPLES];
 static int      curBuffer = 0;
 static AndroidAudioCallback audioCallback;
+
+static double   g_gaining = 2.0;
 
 OPN2_MIDIPlayer* playingDevice = NULL;
 
@@ -64,12 +76,12 @@ static void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
     assert(bq == bqPlayerBufferQueue);
     assert(NULL == context);
     pthread_mutex_lock(&g_lock);
-    short *nextBuffer = buffer[curBuffer];
+    sample_t *nextBuffer = buffer[curBuffer];
     int nextSize = bufferLen[curBuffer];
     if(nextSize > 0)
     {
         SLresult result;
-        result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, nextBuffer, nextSize*2);
+        result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, nextBuffer, nextSize * 2);
         // Comment from sample code:
         // the most likely other result is SL_RESULT_BUFFER_INSUFFICIENT,
         // which for this code example would indicate a programming error
@@ -87,7 +99,7 @@ bool OpenSLWrap_Init(AndroidAudioCallback cb)
     audioCallback = cb;
     SLresult result;
 
-    memset(buffer, 0, BUFFER_SIZE*2);
+    memset(buffer, 0, BUFFER_SIZE * sizeof(sample_t));
     bufferLen[0] = BUFFER_SIZE_IN_SAMPLES;
     bufferLen[1] = BUFFER_SIZE_IN_SAMPLES;
 
@@ -104,15 +116,28 @@ bool OpenSLWrap_Init(AndroidAudioCallback cb)
     assert(SL_RESULT_SUCCESS == result);
 
     SLDataLocator_AndroidSimpleBufferQueue loc_bufq = {SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE, 2};
-    SLDataFormat_PCM format_pcm = {
-            SL_DATAFORMAT_PCM,
-            2,
-            SL_SAMPLINGRATE_44_1,
-            SL_PCMSAMPLEFORMAT_FIXED_16,
-            SL_PCMSAMPLEFORMAT_FIXED_16,
-            SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT,
-            SL_BYTEORDER_LITTLEENDIAN
-    };
+
+    /* for Android 21+*/
+//    SLAndroidDataFormat_PCM_EX format_pcm;
+//    format_pcm.formatType = SL_ANDROID_DATAFORMAT_PCM_EX;
+//    format_pcm.numChannels = 2;
+//    format_pcm.sampleRate = SL_SAMPLINGRATE_44_1;
+//    format_pcm.bitsPerSample = SL_PCMSAMPLEFORMAT_FIXED_32;
+//    format_pcm.containerSize = SL_PCMSAMPLEFORMAT_FIXED_32;
+//    format_pcm.channelMask = SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT;
+//    format_pcm.endianness = SL_BYTEORDER_LITTLEENDIAN;
+//    format_pcm.representation = SL_ANDROID_PCM_REPRESENTATION_FLOAT;
+
+    /* for Android <21 */
+    SLDataFormat_PCM format_pcm;
+    format_pcm.formatType = SL_DATAFORMAT_PCM;
+    format_pcm.numChannels = 2;
+    format_pcm.samplesPerSec = SL_SAMPLINGRATE_44_1;
+    format_pcm.bitsPerSample = SL_PCMSAMPLEFORMAT_FIXED_16;
+    format_pcm.containerSize = SL_PCMSAMPLEFORMAT_FIXED_16;
+    format_pcm.channelMask = SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT;
+    format_pcm.endianness = SL_BYTEORDER_LITTLEENDIAN;
+
     SLDataSource audioSrc = {&loc_bufq, &format_pcm};
 
     // configure audio sink
@@ -157,7 +182,7 @@ void OpenSLWrap_Shutdown()
     result = (*bqPlayerPlay)->SetPlayState(bqPlayerPlay, SL_PLAYSTATE_STOPPED);
     assert(SL_RESULT_SUCCESS == result);
 
-    memset(buffer, 0, BUFFER_SIZE*2);
+    memset(buffer, 0, BUFFER_SIZE * sizeof(sample_t));
     bufferLen[0] = BUFFER_SIZE_IN_SAMPLES;
     bufferLen[1] = BUFFER_SIZE_IN_SAMPLES;
 
@@ -185,9 +210,22 @@ void OpenSLWrap_Shutdown()
  ********************** Minimal OpenSL ES wrapper implementation END ****************************
  ************************************************************************************************/
 
-int audioCallbackFunction(short *buffer, int num_samples)
+int audioCallbackFunction(sample_t *buffer, int num_samples)
 {
-    return opn2_play(playingDevice, num_samples, buffer);
+    OPN2_UInt8 *buff = (OPN2_UInt8*)buffer;
+    int ret = opn2_playFormat(playingDevice, num_samples,
+            buff, buff + g_audioFormat.containerSize,
+            &g_audioFormat);
+
+    if((g_gaining > 0.1) && (g_gaining != 1.0))
+    {
+        for(size_t i = 0; i < num_samples; i++)
+        {
+            buffer[i] = static_cast<sample_t>(static_cast<double>(buffer[i]) * g_gaining);
+        }
+    }
+
+    return ret;
 }
 
 void infiniteLoopStream(OPN2_MIDIPlayer* device)
@@ -197,56 +235,64 @@ void infiniteLoopStream(OPN2_MIDIPlayer* device)
         mutex_created=true;
     }
     playingDevice = device;
+    pthread_mutex_lock(&g_lock);
     OpenSLWrap_Init(audioCallbackFunction);
+    pthread_mutex_unlock(&g_lock);
 }
+
+
 
 
 #define ADLDEV (OPN2_MIDIPlayer*)device
 
 JNIEXPORT void JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_startPlaying(JNIEnv *env, jobject instance, jlong device)
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_startPlaying(JNIEnv *env, jobject instance, jlong device)
 {
-    pthread_mutex_lock(&g_lock);
     infiniteLoopStream(ADLDEV);
-    pthread_mutex_unlock(&g_lock);
 }
 
 JNIEXPORT void JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_stopPlaying(JNIEnv *env, jobject instance)
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_stopPlaying(JNIEnv *env, jobject instance)
 {
     OpenSLWrap_Shutdown();
 }
 
 
 JNIEXPORT jstring JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1errorString(JNIEnv *env, jobject instance)
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1errorString(JNIEnv *env, jobject instance)
 {
     pthread_mutex_lock(&g_lock);
     const char* adlMIDIerr = opn2_errorString();
-    jstring ret = env->NewStringUTF(adlMIDIerr);
     pthread_mutex_unlock(&g_lock);
-    return ret;
+    return env->NewStringUTF(adlMIDIerr);
+}
+
+JNIEXPORT void JNICALL
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_setGaining(JNIEnv *env, jobject /*instance*/, jdouble gaining)
+{
+    pthread_mutex_lock(&g_lock);
+    g_gaining = (double)gaining;
+    pthread_mutex_unlock(&g_lock);
 }
 
 JNIEXPORT jstring JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1errorInfo(JNIEnv *env, jobject instance, jlong device) {
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1errorInfo(JNIEnv *env, jobject instance, jlong device) {
 
     pthread_mutex_lock(&g_lock);
     const char* adlMIDIerr = opn2_errorInfo(ADLDEV);
-    jstring ret = env->NewStringUTF(adlMIDIerr);
     pthread_mutex_unlock(&g_lock);
-    return ret;
+    return env->NewStringUTF(adlMIDIerr);
 }
 
 JNIEXPORT jstring JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_stringFromJNI(JNIEnv *env, jobject /* this */)
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_stringFromJNI(JNIEnv *env, jobject /* this */)
 {
     std::string hello = "OPN2 Emulator is ready";
     return env->NewStringUTF(hello.c_str());
 }
 
 JNIEXPORT jint JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setNumChips(JNIEnv *env, jobject instance, jlong device,
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setNumChips(JNIEnv *env, jobject instance, jlong device,
                                                        jint numCards) {
     pthread_mutex_lock(&g_lock);
     jint ret = (jint)opn2_setNumChips(ADLDEV, (int)numCards);
@@ -255,13 +301,13 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setNumChips(JNIEnv *env, jobject inst
 }
 
 JNIEXPORT jlong JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1init(JNIEnv *env, jobject instance, jlong sampleRate)
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1init(JNIEnv *env, jobject instance, jlong sampleRate)
 {
     return (jlong)opn2_init((long)sampleRate);
 }
 
 JNIEXPORT void JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setScaleModulators(JNIEnv *env, jobject instance,
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setScaleModulators(JNIEnv *env, jobject instance,
                                                               jlong device, jint smod)
 {
     pthread_mutex_lock(&g_lock);
@@ -270,7 +316,7 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setScaleModulators(JNIEnv *env, jobje
 }
 
 JNIEXPORT void JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setFullRangeBrightness(JNIEnv *env, jobject instance,
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setFullRangeBrightness(JNIEnv *env, jobject instance,
                                                               jlong device, jint fr_brightness)
 {
     pthread_mutex_lock(&g_lock);
@@ -280,7 +326,7 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setFullRangeBrightness(JNIEnv *env, j
 
 
 JNIEXPORT void JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setLoopEnabled(JNIEnv *env, jobject instance,
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setLoopEnabled(JNIEnv *env, jobject instance,
                                                           jlong device, jint loopEn)
 {
     pthread_mutex_lock(&g_lock);
@@ -290,7 +336,7 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setLoopEnabled(JNIEnv *env, jobject i
 
 
 JNIEXPORT jint JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1openBankFile(JNIEnv *env, jobject instance, jlong device,
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1openBankFile(JNIEnv *env, jobject instance, jlong device,
                                                     jstring file_) {
     pthread_mutex_lock(&g_lock);
     const char *file = env->GetStringUTFChars(file_, 0);
@@ -301,7 +347,7 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1openBankFile(JNIEnv *env, jobject ins
 }
 
 JNIEXPORT jint JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1openBankData(JNIEnv *env, jobject instance, jlong device,
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1openBankData(JNIEnv *env, jobject instance, jlong device,
                                                     jbyteArray array_) {
     pthread_mutex_lock(&g_lock);
     jbyte *array = env->GetByteArrayElements(array_, NULL);
@@ -312,9 +358,8 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1openBankData(JNIEnv *env, jobject ins
     return ret;
 }
 
-
 JNIEXPORT jint JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1openFile(JNIEnv *env, jobject instance, jlong device,
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1openFile(JNIEnv *env, jobject instance, jlong device,
                                                     jstring file_) {
     pthread_mutex_lock(&g_lock);
     const char *file = env->GetStringUTFChars(file_, 0);
@@ -325,7 +370,7 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1openFile(JNIEnv *env, jobject instanc
 }
 
 JNIEXPORT jint JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1openData(JNIEnv *env, jobject instance, jlong device,
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1openData(JNIEnv *env, jobject instance, jlong device,
                                                     jbyteArray array_) {
     pthread_mutex_lock(&g_lock);
     jbyte *array = env->GetByteArrayElements(array_, NULL);
@@ -337,14 +382,14 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1openData(JNIEnv *env, jobject instanc
 }
 
 JNIEXPORT void JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1reset(JNIEnv *env, jobject instance, jlong device) {
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1reset(JNIEnv *env, jobject instance, jlong device) {
     pthread_mutex_lock(&g_lock);
     opn2_reset(ADLDEV);
     pthread_mutex_unlock(&g_lock);
 }
 
 JNIEXPORT void JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1close(JNIEnv *env, jobject instance, jlong device)
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1close(JNIEnv *env, jobject instance, jlong device)
 {
     pthread_mutex_lock(&g_lock);
     opn2_close(ADLDEV);
@@ -352,7 +397,7 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1close(JNIEnv *env, jobject instance, 
 }
 
 JNIEXPORT jint JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1play(JNIEnv *env, jobject instance, jlong device,
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1play(JNIEnv *env, jobject instance, jlong device,
                                                 jshortArray buffer_)
 {
     pthread_mutex_lock(&g_lock);
@@ -367,7 +412,7 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1play(JNIEnv *env, jobject instance, j
 
 
 JNIEXPORT jdouble JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1positionTell(JNIEnv *env, jobject instance, jlong device)
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1positionTell(JNIEnv *env, jobject instance, jlong device)
 {
     pthread_mutex_lock(&g_lock);
     jdouble ret = (jdouble)opn2_positionTell(ADLDEV);
@@ -376,7 +421,7 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1positionTell(JNIEnv *env, jobject ins
 }
 
 JNIEXPORT jdouble JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1totalTimeLength(JNIEnv *env, jobject instance, jlong device)
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1totalTimeLength(JNIEnv *env, jobject instance, jlong device)
 {
     pthread_mutex_lock(&g_lock);
     jdouble ret = (jdouble)opn2_totalTimeLength(ADLDEV);
@@ -385,7 +430,7 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1totalTimeLength(JNIEnv *env, jobject 
 }
 
 JNIEXPORT void JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1positionSeek(JNIEnv *env, jobject instance, jlong device,
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1positionSeek(JNIEnv *env, jobject instance, jlong device,
                                                         jdouble seconds)
 {
     pthread_mutex_lock(&g_lock);
@@ -395,14 +440,14 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1positionSeek(JNIEnv *env, jobject ins
 
 
 JNIEXPORT jstring JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1getBankName(JNIEnv *env, jobject instance, jint bank)
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1getBankName(JNIEnv *env, jobject instance, jint bank)
 {
     std::string hello = "NoBanks";
     return env->NewStringUTF(hello.c_str());
 }
 
 JNIEXPORT void JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setLogarithmicVolumes(JNIEnv *env, jobject instance,
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setLogarithmicVolumes(JNIEnv *env, jobject instance,
                                                                  jlong device, jint logvol)
 {
     pthread_mutex_lock(&g_lock);
@@ -411,7 +456,7 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setLogarithmicVolumes(JNIEnv *env, jo
 }
 
 JNIEXPORT void JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setVolumeRangeModel(JNIEnv *env, jobject instance,
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setVolumeRangeModel(JNIEnv *env, jobject instance,
                                                                jlong device, jint volumeModel) {
     pthread_mutex_lock(&g_lock);
     opn2_setVolumeRangeModel(ADLDEV, (int)volumeModel);
@@ -420,11 +465,20 @@ Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setVolumeRangeModel(JNIEnv *env, jobj
 
 
 JNIEXPORT jint JNICALL
-Java_ru_wohlsoft_opnmidiplayer_Player_adl_1setRunAtPcmRate(JNIEnv *env, jobject instance,
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setRunAtPcmRate(JNIEnv *env, jobject instance,
                                                                  jlong device, jint enabled)
 {
     pthread_mutex_lock(&g_lock);
     jint ret = (jint)opn2_setRunAtPcmRate(ADLDEV, (int)enabled);
     pthread_mutex_unlock(&g_lock);
     return ret;
+}
+
+JNIEXPORT void JNICALL
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setSoftPanEnabled(JNIEnv *env, jobject /*instance*/,
+                                                                  jlong device, jint enabled)
+{
+    pthread_mutex_lock(&g_lock);
+    opn2_setSoftPanEnabled(ADLDEV, (int)enabled);
+    pthread_mutex_unlock(&g_lock);
 }

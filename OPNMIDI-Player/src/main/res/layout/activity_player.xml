@@ -1,172 +1,272 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/activity_player"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="ru.wohlsoft.opnmidiplayer.Player">
+
     <RelativeLayout
         android:id="@+id/activity_playerZ"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingBottom="@dimen/activity_vertical_margin"
         android:paddingLeft="@dimen/activity_horizontal_margin"
+        android:paddingTop="@dimen/activity_vertical_margin"
         android:paddingRight="@dimen/activity_horizontal_margin"
-        android:paddingTop="@dimen/activity_vertical_margin">
+        android:paddingBottom="@dimen/activity_vertical_margin">
 
-    <TextView
-        android:id="@+id/sample_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Hello World!"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentTop="true" />
+        <TextView
+            android:id="@+id/currentFileName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
+            android:text="@string/no_files_loaded" />
 
-    <Button
-        tools:text="@string/open"
-        android:text="@string/open"
-        android:id="@+id/openFile"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/sample_text"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"/>
+        <Button
+            android:id="@+id/openFile"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/currentFileName"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentLeft="true"
+            android:text="@string/open"
+            tools:text="@string/open" />
 
-    <Button
-        tools:text="@string/playpause"
-        android:text="@string/playpause"
-        android:id="@+id/playPause"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/sample_text"
-        android:layout_toRightOf="@+id/openFile"
-        android:layout_toEndOf="@+id/openFile"/>
+        <Button
+            android:id="@+id/playPause"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/currentFileName"
+            android:layout_toEndOf="@+id/openFile"
+            android:layout_toRightOf="@+id/openFile"
+            android:text="@string/playpause"
+            tools:text="@string/playpause" />
 
-    <Button
-        tools:text="@string/restart"
-        android:text="@string/restart"
-        android:id="@+id/restart"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/sample_text"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true"
-        android:layout_toRightOf="@+id/playPause"
-        android:layout_toEndOf="@+id/playPause" />
+        <Button
+            android:id="@+id/restart"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/currentFileName"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
+            android:layout_toEndOf="@+id/playPause"
+            android:layout_toRightOf="@+id/playPause"
+            android:text="@string/restart"
+            tools:text="@string/restart" />
 
         <CheckBox
             android:id="@+id/scalableModulation"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentRight="true"
-            android:layout_alignParentEnd="true"
             android:layout_below="@+id/openFile"
+            android:layout_alignEnd="@+id/openFile"
+            android:layout_alignRight="@+id/restart"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
             android:text="@string/scalemod"
-            tools:text="@string/scalemod"
-        />
+            tools:text="@string/scalemod" />
 
         <CheckBox
-            android:id="@+id/fullRangeBrightness"
+            android:id="@+id/fullPanningStereo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignEnd="@+id/scalableModulation"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentStart="true"
-            android:layout_alignRight="@+id/scalableModulation"
             android:layout_below="@+id/scalableModulation"
-            android:text="@string/fullrangebrightness"
-            tools:text="@string/fullrangebrightness" />
+            android:layout_alignEnd="@+id/scalableModulation"
+            android:layout_alignRight="@+id/scalableModulation"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
+            android:text="@string/full_panning_stereo"
+            tools:text="@string/full_panning_stereo" />
 
         <TextView
-            android:text="@string/volumesModel"
+            android:id="@+id/volumeRangesModelLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/volumeRangesModelLabel"
-            android:layout_below="@+id/fullRangeBrightness"
-            android:layout_alignParentLeft="true"
+            android:layout_below="@+id/fullPanningStereo"
             android:layout_alignParentStart="true"
-            android:layout_alignParentRight="true"
+            android:layout_alignParentLeft="true"
             android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
+            android:text="@string/volumesModel"
             tools:text="@string/volumesModel" />
 
         <Spinner
+            android:id="@+id/volumeRangesModel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:id="@+id/volumeRangesModel"
             android:layout_below="@+id/volumeRangesModelLabel"
-            android:layout_alignParentLeft="true"
             android:layout_alignParentStart="true"
-            android:layout_alignParentRight="true"
-            android:layout_alignParentEnd="true" />
-
-        <NumberPicker
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:inputType="numberSigned"
-            android:ems="10"
-            android:id="@+id/numChips"
-            android:layout_below="@+id/numChipsLabel"
             android:layout_alignParentLeft="true"
-            android:layout_alignParentStart="true"
-            android:descendantFocusability="blocksDescendants"
-            android:orientation="horizontal"/>
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true" />
 
         <Button
+            android:id="@+id/customBank"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/quitapp"
-            tools:text="@string/quit"
-            android:text="@string/quit"
-            android:layout_below="@+id/numChips"
-            android:layout_alignParentLeft="true"
+            android:layout_below="@+id/volumeRangesModel"
             android:layout_alignParentStart="true"
-            android:layout_alignParentRight="true"
-            android:layout_alignParentEnd="true" />
+            android:layout_alignParentLeft="true"
+            android:text="@string/chooseBank" />
 
+        <CheckBox
+            android:id="@+id/useCustom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignBaseline="@+id/customBank"
+            android:layout_alignBottom="@+id/customBank"
+            android:layout_toEndOf="@+id/customBank"
+            android:layout_toRightOf="@+id/customBank"
+            android:text="@string/useCustom" />
+
+        <TextView
+            android:id="@+id/bankFileName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/customBank"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentLeft="true"
+            android:text="@string/bank_file_empty" />
 
         <SeekBar
             android:id="@+id/musPos"
             style="@style/Widget.AppCompat.SeekBar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="35px"
-            android:layout_marginBottom="35px"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentRight="true"
+            android:layout_below="@+id/bankFileName"
             android:layout_alignParentStart="true"
-            android:layout_below="@+id/volumeRangesModel"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentRight="true"
+            android:layout_marginTop="15dp"
+            android:layout_marginBottom="15dp"
             android:max="100"
             android:progress="0" />
 
-        <TextView
-        android:text="@string/numChips"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-            android:id="@+id/numChipsLabel"
-        tools:text="@string/numChips"
+        <android.support.constraint.ConstraintLayout
+            android:layout_width="368dp"
+            android:layout_height="220dp"
             android:layout_below="@+id/musPos"
-            android:layout_alignParentLeft="true"
             android:layout_alignParentStart="true"
-            android:layout_marginTop="19dp" />
+            android:layout_alignParentLeft="false"
+            android:layout_marginStart="0dp"
+            android:layout_marginLeft="0dp"
+            android:layout_marginTop="3dp"
+            android:layout_marginBottom="34dp">
 
-        <TextView
-            android:text="TextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/numChipsCount"
-            android:layout_toRightOf="@+id/numChips"
-            android:layout_toEndOf="@+id/numChips"
-            android:layout_alignBottom="@+id/numChips"
-            android:layout_alignTop="@+id/numChips"
-            android:textAllCaps="false"
-            android:textStyle="normal|italic" />
+            <TextView
+                android:id="@+id/chipsCountLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/numChips"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.0"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/numChipsCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginLeft="8dp"
+                android:layout_marginTop="17dp"
+                android:text="@string/vrmAuto"
+                app:layout_constraintStart_toEndOf="@+id/numChipsMinus"
+                app:layout_constraintTop_toBottomOf="@+id/chipsCountLabel" />
+
+            <Button
+                android:id="@+id/numChipsMinus"
+                android:layout_width="42dp"
+                android:layout_height="48dp"
+                android:text="@string/sign_minus"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/chipsCountLabel" />
+
+            <Button
+                android:id="@+id/numChipsPlus"
+                android:layout_width="42dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginLeft="8dp"
+                android:text="@string/sign_plus"
+                app:layout_constraintStart_toEndOf="@+id/numChipsCount"
+                app:layout_constraintTop_toBottomOf="@+id/chipsCountLabel" />
+
+
+            <TextView
+                android:id="@+id/gainFactorLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:text="@string/gain_factor"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/numChipsMinus" />
+
+            <Button
+                android:id="@+id/gainFactorMinus"
+                android:layout_width="42dp"
+                android:layout_height="48dp"
+                android:text="@string/sign_minus"
+                app:layout_constraintStart_toEndOf="@+id/gainFactorMinusMinus"
+                app:layout_constraintTop_toBottomOf="@+id/gainFactorLabel" />
+
+            <Button
+                android:id="@+id/gainFactorMinusMinus"
+                android:layout_width="42dp"
+                android:layout_height="48dp"
+                android:text="@string/sign_minusminus"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/gainFactorLabel" />
+
+            <TextView
+                android:id="@+id/gainFactor"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginLeft="8dp"
+                android:layout_marginTop="18dp"
+                android:text="@string/vrmAuto"
+                app:layout_constraintStart_toEndOf="@+id/gainFactorMinus"
+                app:layout_constraintTop_toBottomOf="@+id/gainFactorLabel" />
+
+            <Button
+                android:id="@+id/gainFactorPlus"
+                android:layout_width="42dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginLeft="8dp"
+                android:text="@string/sign_plus"
+                app:layout_constraintStart_toEndOf="@+id/gainFactor"
+                app:layout_constraintTop_toBottomOf="@+id/gainFactorLabel" />
+
+            <Button
+                android:id="@+id/gainFactorPlusPlus"
+                android:layout_width="42dp"
+                android:layout_height="48dp"
+                android:text="@string/sign_plusplus"
+                app:layout_constraintStart_toEndOf="@+id/gainFactorPlus"
+                app:layout_constraintTop_toBottomOf="@+id/gainFactorLabel" />
+
+            <Button
+                android:id="@+id/quitapp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/quit"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+        </android.support.constraint.ConstraintLayout>
 
     </RelativeLayout>
 </ScrollView>

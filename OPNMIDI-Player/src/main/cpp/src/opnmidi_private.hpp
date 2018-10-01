@@ -135,6 +135,9 @@ typedef BW_MidiSequencer MidiSequencer;
 #define OPN_PANNING_RIGHT   0x40
 #define OPN_PANNING_BOTH    0xC0
 
+#define OPN_MAX_CHIPS 100
+#define OPN_MAX_CHIPS_STR "100"
+
 extern std::string OPN2MIDI_ErrorString;
 
 /*
@@ -231,6 +234,8 @@ public:
     bool m_scaleModulators;
     //! Run emulator at PCM rate if that possible. Reduces sounding accuracy, but decreases CPU usage on lower rates.
     bool m_runAtPcmRate;
+    //! Enable soft panning
+    bool m_softPanning;
 
     //! Just a padding. Reserved.
     char _padding2[3];
@@ -288,6 +293,12 @@ public:
     ~OPN2();
 
     /**
+     * @brief Checks are setup locked to be changed on the fly or not
+     * @return true when setup on the fly is locked
+     */
+    bool setupLocked();
+
+    /**
      * @brief Write data to OPN2 chip register
      * @param chip Index of emulated chip. In hardware OPN2 builds, this parameter is ignored
      * @param port Port of the chip to write
@@ -304,6 +315,14 @@ public:
      * @param value Value to write
      */
     void writeRegI(size_t chip, uint8_t port, uint32_t index, uint32_t value);
+
+    /**
+     * @brief Write to soft panning control of OPN2 chip emulator
+     * @param chip Index of emulated chip.
+     * @param address Register of channel to write
+     * @param value Value to write
+     */
+    void writePan(size_t chip, uint32_t index, uint32_t value);
 
     /**
      * @brief Off the note in specified chip channel
@@ -711,7 +730,7 @@ public:
             vibspeed = 2 * 3.141592653 * 5.0;
             vibdepth = 0.5 / 127;
             vibdelay_us = 0;
-            panning = OPN_PANNING_BOTH;
+            panning = 64;
             portamento = 0;
             portamentoEnable = false;
             portamentoSource = -1;
@@ -854,7 +873,7 @@ public:
         int     emulator;
         bool    runAtPcmRate;
         unsigned int OpnBank;
-        unsigned int NumCards;
+        unsigned int numChips;
         unsigned int LogarithmicVolumes;
         int     VolumeModel;
         int     lfoEnable;
@@ -1345,7 +1364,6 @@ public:
 #if defined(ADLMIDI_AUDIO_TICK_HANDLER)
 extern void opn2_audioTickHandler(void *instance, uint32_t chipId, uint32_t rate);
 #endif
-extern int opn2RefreshNumCards(OPN2_MIDIPlayer *device);
 
 /**
  * @brief Check emulator availability

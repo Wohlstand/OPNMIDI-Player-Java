@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Плеер OPNMIDI</string>
-    <string name="adlibdrums">Режим ударных AdLib</string>
     <string name="bankNo">Муз. банк</string>
-    <string name="htremolo">Усиленное тремоло</string>
-    <string name="hvibrato">Усиленное вибрато</string>
     <string name="open">Открыть</string>
     <string name="playpause">Воспр./Приост.</string>
     <string name="quit">Выйти</string>
@@ -20,5 +17,14 @@
     <string name="vrmDMX">DMX</string>
     <string name="vrmApogee">Apogee</string>
     <string name="vrm9x">9X</string>
-    <string name="fullrangebrightness">Полный диапазон CC74 (Яркость)</string>
+    <string name="chooseBank">Отркыть свой банк</string>
+    <string name="useCustom">Вкл. свой банк</string>
+    <string name="bank_file_empty"><![CDATA[<Файл банка>]]></string>
+    <string name="full_panning_stereo">Полное стерео</string>
+    <string name="sign_minus">-</string>
+    <string name="sign_plus">+</string>
+    <string name="no_files_loaded"><![CDATA[<Нет загруженных файлов>]]></string>
+    <string name="gain_factor">Фактор усиления</string>
+    <string name="sign_plusplus">++</string>
+    <string name="sign_minusminus">--</string>
 </resources>

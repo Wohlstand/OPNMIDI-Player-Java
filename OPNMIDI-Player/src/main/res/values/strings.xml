@@ -4,10 +4,7 @@
     <string name="playpause">Play/Pause</string>
     <string name="quit">Quit</string>
     <string name="bankNo">Music bank</string>
-    <string name="htremolo">Deep Tremolo</string>
-    <string name="hvibrato">Deep Vibrato</string>
     <string name="scalemod">Scalable modulation</string>
-    <string name="adlibdrums">AdLib drums mode</string>
     <string name="numChips">Number of emulated chips</string>
     <string name="num4opChans">Total number of 4-op channels</string>
     <string name="restart">Restart</string>
@@ -19,5 +16,14 @@
     <string name="vrmDMX">DMX</string>
     <string name="vrmApogee">Apogee</string>
     <string name="vrm9x">9X</string>
-    <string name="fullrangebrightness">Full-Range CC74 Brightness</string>
+    <string name="chooseBank">Choose custom bank</string>
+    <string name="useCustom">Use custom</string>
+    <string name="bank_file_empty"><![CDATA[<Bank File>]]></string>
+    <string name="sign_minus">-</string>
+    <string name="sign_plus">+</string>
+    <string name="full_panning_stereo">Full-panning stereo</string>
+    <string name="no_files_loaded"><![CDATA[<No files loaded>]]></string>
+    <string name="gain_factor">Gain factor</string>
+    <string name="sign_plusplus">++</string>
+    <string name="sign_minusminus">--</string>
 </resources>

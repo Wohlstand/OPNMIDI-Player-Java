@@ -22,7 +22,7 @@ import java.io.InputStream;
 
 public class PlayerService extends Service {
     private static int FOREGROUND_ID=4478;
-    private static String NOTIFICATION_ID="OPNMIDI-Player";
+    private static final String NOTIFICATION_ID="OPNMIDI-Player";
     final String LOG_TAG = "PlayerService";
 
     private SharedPreferences   m_setup = null;
@@ -248,7 +248,7 @@ public class PlayerService extends Service {
             m_useCustomBank = setup.getBoolean("useCustomBank", m_useCustomBank);
             m_lastBankPath = setup.getString("lastBankPath", m_lastBankPath);
             m_ADL_bank = setup.getInt("adlBank", m_ADL_bank);
-            m_ADL_scalable = setup.getBoolean("flagScalable", m_ADL_scalable > 0) ? 1 : -1;
+            m_ADL_scalable = setup.getBoolean("flagScalable", m_ADL_scalable > 0) ? 1 : 0;
             m_ADL_softPanEnabled = setup.getBoolean("flagSoftPan", m_ADL_softPanEnabled > 0) ? 1 : 0;
 
             m_adl_numChips = setup.getInt("numChips", m_adl_numChips);

@@ -39,7 +39,7 @@ https://github.com/Wohlstand/OPNMIDI-Player-Java/releases
 * Use "Open" button to open file dialog and select any MIDI, RMI or KAR file
 * Setup any preferences (volume model, number of emulated chips, etc.)
 * Press "Play/Pause" to start playing or press again to pause or resume
-* Press "Restart" to begin playing of music from begin (needed to apply changes of some settings)
+* Press "Restart" to begin playing of music from begin
 * Use "Open" again to select any other music file
 * You can switch another application or lock screen, music playing will work in background.
 

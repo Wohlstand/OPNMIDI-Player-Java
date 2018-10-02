@@ -85,7 +85,7 @@
             android:layout_alignParentEnd="true"
             android:layout_alignParentRight="true"
             android:text="@string/run_at_pcm_rate"
-            tools:text="Run at PCM Rate (Reduce CPU usage)" />
+            tools:text="@string/run_at_pcm_rate" />
 
         <CheckBox
             android:id="@+id/fullPanningStereo"

@@ -210,6 +210,22 @@ public class Player extends AppCompatActivity {
             });
 
             /*****
+             * Run at PCM Rate checkbox
+             */
+            CheckBox runAtPcmRate = (CheckBox)findViewById(R.id.runAtPcmRate);
+            runAtPcmRate.setChecked(m_service.getRunAtPcmRate());
+            runAtPcmRate.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    if(m_bound)
+                        m_service.setRunAtPcmRate(isChecked);
+                    Toast toast = Toast.makeText(getApplicationContext(),
+                              "Run at PCM Rate has toggled!", Toast.LENGTH_SHORT);
+                    toast.show();
+                }
+            });
+
+            /*****
              * Scalable Modulators checkbox
              */
             CheckBox scalableMod = (CheckBox)findViewById(R.id.scalableModulation);
@@ -220,7 +236,7 @@ public class Player extends AppCompatActivity {
                     if(m_bound)
                         m_service.setScalableModulators(isChecked);
                     Toast toast = Toast.makeText(getApplicationContext(),
-                              "Scalable modulation toggled toggled!", Toast.LENGTH_SHORT);
+                            "Scalable modulation has toggled!", Toast.LENGTH_SHORT);
                     toast.show();
                 }
             });

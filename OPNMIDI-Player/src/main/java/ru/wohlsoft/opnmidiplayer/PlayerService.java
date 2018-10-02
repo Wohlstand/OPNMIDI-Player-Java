@@ -51,6 +51,8 @@ public class PlayerService extends Service {
     private int                 m_ADL_bank = 58;
     private int                 m_ADL_scalable = 0;
     private int                 m_ADL_softPanEnabled = 0;
+    // Default 1 for performance reasons
+    private int                 m_ADL_runAtPcmRate = 1;
 
     private int                 m_adl_numChips = 2;
     private int                 m_ADL_volumeModel = 0;
@@ -250,6 +252,7 @@ public class PlayerService extends Service {
             m_ADL_bank = setup.getInt("adlBank", m_ADL_bank);
             m_ADL_scalable = setup.getBoolean("flagScalable", m_ADL_scalable > 0) ? 1 : 0;
             m_ADL_softPanEnabled = setup.getBoolean("flagSoftPan", m_ADL_softPanEnabled > 0) ? 1 : 0;
+            m_ADL_runAtPcmRate = setup.getBoolean("flagRunAtPcmRate", m_ADL_runAtPcmRate > 0) ? 1 : 0;
 
             m_adl_numChips = setup.getInt("numChips", m_adl_numChips);
             m_ADL_volumeModel = setup.getInt("volumeModel", m_ADL_volumeModel);
@@ -324,7 +327,7 @@ public class PlayerService extends Service {
         }
 
         adl_setNumChips(MIDIDevice, m_adl_numChips);
-        adl_setRunAtPcmRate(MIDIDevice, 1); // Reduces CPU usage, BUT, also reduces sounding accuracy
+        adl_setRunAtPcmRate(MIDIDevice, m_ADL_runAtPcmRate); // Reduces CPU usage, BUT, also reduces sounding accuracy
         adl_setScaleModulators(MIDIDevice, m_ADL_scalable);
         adl_setSoftPanEnabled(MIDIDevice, m_ADL_softPanEnabled);
         adl_setVolumeRangeModel(MIDIDevice, m_ADL_volumeModel);
@@ -392,6 +395,20 @@ public class PlayerService extends Service {
         return m_ADL_scalable > 0;
     }
 
+    public void setRunAtPcmRate(boolean flag)
+    {
+        m_ADL_runAtPcmRate = flag ? 1 : 0;
+        m_setup.edit().putBoolean("flagRunAtPcmRate", flag).apply();
+        if(MIDIDevice == 0) {
+            return;
+        }
+        adl_setRunAtPcmRate(MIDIDevice, m_ADL_runAtPcmRate);
+    }
+    public boolean getRunAtPcmRate()
+    {
+        return m_ADL_runAtPcmRate > 0;
+    }
+
     public void setFullPanningStereo(boolean flag)
     {
         m_ADL_softPanEnabled = flag ? 1 : 0;
@@ -414,11 +431,6 @@ public class PlayerService extends Service {
     public int getChipsCount()
     {
         return m_adl_numChips;
-    }
-
-    public int getFourOpMax()
-    {
-        return 6 * m_adl_numChips;
     }
 
     public int getSongLength()

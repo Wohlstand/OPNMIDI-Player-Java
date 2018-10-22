@@ -82,7 +82,7 @@ public class Player extends AppCompatActivity {
     public void seekerStart()
     {
         //Register Broadcast receiver
-        LocalBroadcastManager.getInstance(this).registerReceiver(mBroadcastReceiver, new IntentFilter("ADLMIDI_Broadcast"));
+        LocalBroadcastManager.getInstance(this).registerReceiver(mBroadcastReceiver, new IntentFilter("OPNMIDI_Broadcast"));
     }
 
     public void seekerStop()

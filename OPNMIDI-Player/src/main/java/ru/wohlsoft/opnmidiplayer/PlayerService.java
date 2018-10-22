@@ -106,7 +106,7 @@ public class PlayerService extends Service {
             return; //Do nothing
         m_lastSeekPosition = percentage;
 
-        Intent intent = new Intent("ADLMIDI_Broadcast");
+        Intent intent = new Intent("OPNMIDI_Broadcast");
         int seekPos = getPosition();
         intent.putExtra("INTENT_TYPE", "SEEKBAR_RESULT");
         intent.putExtra("PERCENTAGE", seekPos);

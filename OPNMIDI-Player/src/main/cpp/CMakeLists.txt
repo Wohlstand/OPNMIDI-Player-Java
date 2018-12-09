@@ -3,11 +3,14 @@ project(libOPNMIDI VERSION 1.4.0 LANGUAGES C CXX)
 
 include(GNUInstallDirs)
 
+# Prefer C++98 standard
+set(CMAKE_CXX_STANDARD 98)
+
 #===========================================================================================
 # Strip garbage
 if(APPLE)
     set(LINK_FLAGS_RELEASE  "${LINK_FLAGS_RELEASE} -dead_strip")
-elseif(NOT MSVC AND NOT MSDOS)
+elseif(NOT MSVC AND NOT MSDOS AND NOT OPENBSD_LOCALBASE)
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Os -s -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,-s")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Os -s -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,-s")
     set(LINK_FLAGS_RELEASE  "${LINK_FLAGS_RELEASE} -Wl,--gc-sections -Wl,-s")
@@ -49,6 +52,11 @@ IF(NOT WIN32 AND NOT DJGPP AND NOT MSDOS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 ENDIF()
 
+if(OPENBSD_LOCALBASE)
+    message("OpenBSD Detected!")
+    include_directories(/usr/local/include)
+endif()
+
 if(WIN32)
     add_definitions(-DUNICODE -D_UNICODE)
 endif()
@@ -89,6 +97,7 @@ option(USE_MAME_EMULATOR    "Use MAME YM2612 emulator (for most of hardware)" ON
 option(USE_GENS_EMULATOR    "Use GENS 2.10 emulator (fastest, very outdated, inaccurate)" ON)
 option(USE_NUKED_EMULATOR   "Use Nuked OPN2 emulator (most accurate, heavy)" ON)
 option(USE_GX_EMULATOR      "Use Genesis Plus GX emulator (experimental)" OFF)
+option(USE_NP2_EMULATOR     "Use Neko Project II emulator" ON)
 # WIP FEATURES
 # option(WITH_CPP_EXTRAS      "Build with support for C++ extras (features are can be found in 'adlmidi.hpp' header)" OFF)
 
@@ -173,6 +182,20 @@ else()
     add_definitions(-DOPNMIDI_DISABLE_GX_EMULATOR)
 endif()
 
+if(USE_NP2_EMULATOR)
+    list(APPEND libOPNMIDI_SOURCES
+        ${libOPNMIDI_SOURCE_DIR}/src/chips/np2_opna.cpp
+        ${libOPNMIDI_SOURCE_DIR}/src/chips/np2/fmgen_opna.cpp
+        ${libOPNMIDI_SOURCE_DIR}/src/chips/np2/fmgen_file.cpp
+        ${libOPNMIDI_SOURCE_DIR}/src/chips/np2/fmgen_fmgen.cpp
+        ${libOPNMIDI_SOURCE_DIR}/src/chips/np2/fmgen_fmtimer.cpp
+        ${libOPNMIDI_SOURCE_DIR}/src/chips/np2/fmgen_opna.cpp
+        ${libOPNMIDI_SOURCE_DIR}/src/chips/np2/fmgen_psg.cpp)
+    set(HAS_EMULATOR TRUE)
+else()
+    add_definitions(-DOPNMIDI_DISABLE_NP2_EMULATOR)
+endif()
+
 if(NOT HAS_EMULATOR)
     message(FATAL_ERROR "No emulators enabled! You must enable at least one emulator!")
 endif()
@@ -213,6 +236,9 @@ if(libOPNMIDI_SHARED)
             set_property(TARGET OPNMIDI_shared APPEND_STRING PROPERTY LINK_FLAGS " -static-libgcc -static-libstdc++")
             set_property(TARGET OPNMIDI_shared APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-Bstatic,--whole-archive -lpthread -Wl,-Bdynamic,--no-whole-archive")
         endif()
+        if(OPENBSD_LOCALBASE)
+            set_property(TARGET OPNMIDI_shared APPEND_STRING PROPERTY LINK_FLAGS " -lc")
+        endif()
     endif()
     set_target_properties(OPNMIDI_shared PROPERTIES SOVERSION "1")
 endif()
@@ -249,6 +275,9 @@ if(WITH_MIDIPLAY OR WITH_DAC_UTIL)
         endif()
     else()
         list(APPEND SDL2_NEEDED_LIBRARIES ${SDL2_LIBRARY} pthread dl m stdc++)
+    endif()
+    if(OPENBSD_LOCALBASE)
+        list(REMOVE_ITEM SDL2_NEEDED_LIBRARIES dl)
     endif()
 
 endif()
@@ -370,6 +399,15 @@ if(WITH_UNIT_TESTS)
     add_subdirectory(test)
 endif()
 
+# === Version check ====
+set(VERSION_CHECK_SOURCE "
+    #include \"opnmidi.h\"
+    #if !(OPNMIDI_VERSION_MAJOR == ${PROJECT_VERSION_MAJOR} && OPNMIDI_VERSION_MINOR == ${PROJECT_VERSION_MINOR} && OPNMIDI_VERSION_PATCHLEVEL == ${PROJECT_VERSION_PATCH})
+    #error Project and source code version do not match!
+    #endif")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/version_check.c" "${VERSION_CHECK_SOURCE}")
+add_library(OPNMIDI_version_check OBJECT "${CMAKE_CURRENT_BINARY_DIR}/version_check.c")
+target_include_directories(OPNMIDI_version_check PRIVATE "include")
 
 message("==== libOPNMIDI options ====")
 message("libOPNMIDI_STATIC        = ${libOPNMIDI_STATIC}")
@@ -385,6 +423,7 @@ message("USE_MAME_EMULATOR        = ${USE_MAME_EMULATOR}")
 message("USE_GENS_EMULATOR        = ${USE_GENS_EMULATOR}")
 message("USE_NUKED_EMULATOR       = ${USE_NUKED_EMULATOR}")
 message("USE_GX_EMULATOR          = ${USE_GX_EMULATOR}")
+message("USE_NP2_EMULATOR         = ${USE_NP2_EMULATOR}")
 
 message("===== Utils and extras =====")
 message("WITH_MIDIPLAY            = ${WITH_MIDIPLAY}")

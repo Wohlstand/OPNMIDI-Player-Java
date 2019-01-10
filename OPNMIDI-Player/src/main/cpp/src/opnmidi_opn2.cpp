@@ -1,8 +1,8 @@
 /*
- * libOPNMIDI is a free MIDI to WAV conversion library with OPN2 (YM2612) emulation
+ * libOPNMIDI is a free Software MIDI synthesizer library with OPN2 (YM2612) emulation
  *
  * MIDI parser and player (Original code from ADLMIDI): Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
- * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2018 Vitaly Novichkov <admin@wohlnet.ru>
+ * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2019 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
  * http://iki.fi/bisqwit/source/adlmidi.html
@@ -26,7 +26,7 @@
 
 #if defined(OPNMIDI_DISABLE_NUKED_EMULATOR) && defined(OPNMIDI_DISABLE_MAME_EMULATOR) && \
     defined(OPNMIDI_DISABLE_GENS_EMULATOR) && defined(OPNMIDI_DISABLE_GX_EMULATOR) && \
-    defined(OPNMIDI_DISABLE_NP2_EMULATOR)
+    defined(OPNMIDI_DISABLE_NP2_EMULATOR) && defined(OPNMIDI_DISABLE_MAME_2608_EMULATOR)
 #error "No emulators enabled. You must enable at least one emulator to use this library!"
 #endif
 
@@ -55,6 +55,11 @@
 #include "chips/np2_opna.h"
 #endif
 
+// MAME YM2608 emulator
+#ifndef OPNMIDI_DISABLE_MAME_2608_EMULATOR
+#include "chips/mame_opna.h"
+#endif
+
 static const unsigned opn2_emulatorSupport = 0
 #ifndef OPNMIDI_DISABLE_NUKED_EMULATOR
     | (1u << OPNMIDI_EMU_NUKED)
@@ -70,6 +75,9 @@ static const unsigned opn2_emulatorSupport = 0
 #endif
 #ifndef OPNMIDI_DISABLE_NP2_EMULATOR
     | (1u << OPNMIDI_EMU_NP2)
+#endif
+#ifndef OPNMIDI_DISABLE_MAME_2608_EMULATOR
+    | (1u << OPNMIDI_EMU_MAME_2608)
 #endif
 ;
 
@@ -469,6 +477,11 @@ void OPN2::reset(int emulator, unsigned long PCM_RATE, OPNFamily family, void *a
 #ifndef OPNMIDI_DISABLE_NP2_EMULATOR
         case OPNMIDI_EMU_NP2:
             chip = new NP2OPNA<>(family);
+            break;
+#endif
+#ifndef OPNMIDI_DISABLE_MAME_2608_EMULATOR
+        case OPNMIDI_EMU_MAME_2608:
+            chip = new MameOPNA(family);
             break;
 #endif
         }

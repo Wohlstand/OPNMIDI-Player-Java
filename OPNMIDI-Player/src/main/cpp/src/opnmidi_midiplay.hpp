@@ -1,8 +1,8 @@
 /*
- * libOPNMIDI is a free MIDI to WAV conversion library with OPN2 (YM2612) emulation
+ * libOPNMIDI is a free Software MIDI synthesizer library with OPN2 (YM2612) emulation
  *
  * MIDI parser and player (Original code from ADLMIDI): Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
- * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2018 Vitaly Novichkov <admin@wohlnet.ru>
+ * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2019 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
  * http://iki.fi/bisqwit/source/adlmidi.html
@@ -161,7 +161,7 @@ public:
             enum
             {
                 MaxNumPhysChans = 2,
-                MaxNumPhysItemCount = MaxNumPhysChans,
+                MaxNumPhysItemCount = MaxNumPhysChans
             };
 
             struct FindPredicate
@@ -250,8 +250,8 @@ public:
 
         //! Active notes in the channel
         pl_list<NoteInfo> activenotes;
-        typedef typename pl_list<NoteInfo>::iterator notes_iterator;
-        typedef typename pl_list<NoteInfo>::const_iterator const_notes_iterator;
+        typedef pl_list<NoteInfo>::iterator notes_iterator;
+        typedef pl_list<NoteInfo>::const_iterator const_notes_iterator;
 
         notes_iterator find_activenote(unsigned note)
         {
@@ -375,7 +375,7 @@ public:
                 Sustain_None        = 0x00,
                 Sustain_Pedal       = 0x01,
                 Sustain_Sostenuto   = 0x02,
-                Sustain_ANY         = Sustain_Pedal | Sustain_Sostenuto,
+                Sustain_ANY         = Sustain_Pedal | Sustain_Sostenuto
             };
             uint32_t sustained;
             char _padding[3];
@@ -403,8 +403,8 @@ public:
         MIDIchannel::NoteInfo::Phys recent_ins;
 
         pl_list<LocationData> users;
-        typedef typename pl_list<LocationData>::iterator users_iterator;
-        typedef typename pl_list<LocationData>::const_iterator const_users_iterator;
+        typedef pl_list<LocationData>::iterator users_iterator;
+        typedef pl_list<LocationData>::const_iterator const_users_iterator;
 
         users_iterator find_user(const Location &loc)
         {
@@ -524,7 +524,7 @@ public:
         Mode_GM  = 0x00,
         Mode_GS  = 0x01,
         Mode_XG  = 0x02,
-        Mode_GM2 = 0x04,
+        Mode_GM2 = 0x04
     };
     //! MIDI Synthesizer mode
     uint32_t m_synthMode;

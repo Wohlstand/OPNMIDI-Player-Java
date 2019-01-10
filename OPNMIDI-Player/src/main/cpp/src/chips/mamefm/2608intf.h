@@ -21,18 +21,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "opnmidi_midiplay.hpp"
-#include "opnmidi_opn2.hpp"
-#include "opnmidi_private.hpp"
+#ifndef OPNMIDI_MAMEFM_2608INTF_H
+#define OPNMIDI_MAMEFM_2608INTF_H
 
-std::string OPN2MIDI_ErrorString;
+#include "emu.h"
+#include "emu2149.h"
 
-// Generator callback on audio rate ticks
-
-#if defined(ADLMIDI_AUDIO_TICK_HANDLER)
-void opn2_audioTickHandler(void *instance, uint32_t chipId, uint32_t rate)
+struct ym2608_device : device_t
 {
-    reinterpret_cast<OPNMIDIplay *>(instance)->AudioTick(chipId, rate);
-}
-#endif
+    void update_request();
+    static void update_request(device_t *dev);
 
+    PSG m_psg;
+};
+
+inline void ym2608_device::update_request()
+{
+    // libOPNMIDI: use this callback maybe
+}
+
+inline void ym2608_device::update_request(device_t *dev)
+{
+    static_cast<ym2608_device *>(dev)->update_request();
+}
+
+#endif

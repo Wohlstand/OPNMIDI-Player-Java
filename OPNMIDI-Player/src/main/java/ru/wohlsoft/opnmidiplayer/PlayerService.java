@@ -663,10 +663,6 @@ public class PlayerService extends Service {
 //
     public static native void adl_setLoopEnabled(long device, int loopEn);
 
-    ///    /*Enable or disable Logariphmic volume changer */
-//    extern void adl_setLogarithmicVolumes(struct ADL_MIDIPlayer* device, int logvol);
-    public static native void adl_setLogarithmicVolumes(long device, int logvol);
-
     //    /*Set different volume range model */
 //    extern void adl_setVolumeRangeModel(struct ADL_MIDIPlayer *device, int volumeModel);
     public static native void adl_setVolumeRangeModel(long device, int volumeModel);

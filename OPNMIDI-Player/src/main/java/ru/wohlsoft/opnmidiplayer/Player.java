@@ -9,10 +9,12 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -41,11 +43,12 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Locale;
 
-public class Player extends AppCompatActivity {
+public class Player extends AppCompatActivity
+{
+    final String LOG_TAG = "OPNMIDI";
 
-    //private int                 MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 1;
-    final String LOG_TAG = "PlayerService";
-    private boolean             permission_readAllowed = false;
+    public static final int READ_PERMISSION_FOR_BANK = 1;
+    public static final int READ_PERMISSION_FOR_MUSIC = 2;
 
     private PlayerService m_service;
     private volatile boolean m_bound = false;
@@ -53,7 +56,6 @@ public class Player extends AppCompatActivity {
 
     private SharedPreferences   m_setup = null;
 
-    private String              m_lastFile = "";
     private String              m_lastPath = Environment.getExternalStorageDirectory().getPath();
     private String              m_lastBankPath = "";
 
@@ -351,6 +353,9 @@ public class Player extends AppCompatActivity {
 
             /* *******Everything UI related has been initialized!****** */
             m_uiLoaded = true;
+
+            // Try to load external file if requested
+            handleFileIntent();
         }
     }
 
@@ -381,13 +386,6 @@ public class Player extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_player);
 
-        permission_readAllowed = true;
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            permission_readAllowed =
-                    ContextCompat.checkSelfPermission(this,
-                            Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
-        }
-
         m_setup = getPreferences(Context.MODE_PRIVATE);
 
         m_lastPath              = m_setup.getString("lastPath", m_lastPath);
@@ -416,17 +414,6 @@ public class Player extends AppCompatActivity {
                 }
                 Log.d(LOG_TAG, "Quit: Collect garbage");
                 System.gc();
-
-                Log.d(LOG_TAG, "Quit: New Handler");
-                Handler handler = new Handler();
-                Log.d(LOG_TAG, "Quit: Wait until call Exit");
-                handler.postDelayed(new Runnable(){
-                    @Override
-                    public void run(){
-                        Log.d(LOG_TAG, "Quit: Do Exit NOW!");
-                        System.exit(0);
-                    }
-                }, 3000);
             }
         });
 
@@ -552,7 +539,7 @@ public class Player extends AppCompatActivity {
         }
     }
 
-    private boolean checkFilePermissions()
+    private boolean checkFilePermissions(int requestCode)
     {
         if( (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) &&
                 (ContextCompat.checkSelfPermission(this,
@@ -567,43 +554,52 @@ public class Player extends AppCompatActivity {
                 AlertDialog.Builder b = new AlertDialog.Builder(this);
                 b.setTitle("Permission denied");
                 b.setMessage("Sorry, but permission is denied!\n"+
-                        "Please, check permissions to application!");
+                        "Please, check the Read Extrnal Storage permission to application!");
                 b.setNegativeButton(android.R.string.ok, null);
                 b.show();
-                return false;
+                return true;
             }
             else
             {
                 // No explanation needed, we can request the permission.
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                    ActivityCompat.requestPermissions(this,
-                            new String[] { Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
-                }
+                ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.READ_EXTERNAL_STORAGE}, requestCode);
                 //MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE
                 // MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE is an
                 // app-defined int constant. The callback method gets the
                 // result of the request.
             }
-            return false;
+            return true;
         }
 
-        if(!permission_readAllowed)
-        {
-            AlertDialog.Builder b = new AlertDialog.Builder(this);
-            b.setTitle("Failed permissions");
-            b.setMessage("Can't open file dialog because permission denied. Restart application to take effects!");
-            b.setNegativeButton(android.R.string.ok, null);
-            b.show();
-            return false;
-        }
-
-        return true;
+        return false;
     }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        if (grantResults.length == 1 &&
+                permissions[0].equals(Manifest.permission.READ_EXTERNAL_STORAGE) &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED
+        ) {
+            if (requestCode == READ_PERMISSION_FOR_BANK) {
+                openBankDialog();
+            } else if (requestCode == READ_PERMISSION_FOR_MUSIC) {
+                openMusicFileDialog();
+            }
+        }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    }
+
 
     public void OnOpenBankFileClick(View view) {
         // Here, thisActivity is the current activity
-        if(!checkFilePermissions())
+        if(checkFilePermissions(READ_PERMISSION_FOR_BANK))
             return;
+        openBankDialog();
+    }
+
+    public void openBankDialog()
+    {
 
         File file = new File(m_lastBankPath);
         OpenFileDialog fileDialog = new OpenFileDialog(this)
@@ -633,9 +629,13 @@ public class Player extends AppCompatActivity {
 
     public void OnOpenFileClick(View view) {
         // Here, thisActivity is the current activity
-        if(!checkFilePermissions())
+        if(checkFilePermissions(READ_PERMISSION_FOR_MUSIC))
             return;
+        openMusicFileDialog();
+    }
 
+    public void openMusicFileDialog()
+    {
         OpenFileDialog fileDialog = new OpenFileDialog(this)
                 .setFilter(".*\\.mid|.*\\.midi|.*\\.kar|.*\\.rmi|.*\\.mus|.*\\.xmi")
                 .setCurrentDirectory(m_lastPath)
@@ -643,54 +643,77 @@ public class Player extends AppCompatActivity {
                 {
                     @Override
                     public void OnSelectedFile(String fileName, String lastPath) {
-                        Toast.makeText(getApplicationContext(), fileName, Toast.LENGTH_LONG).show();
-                        TextView tv = (TextView) findViewById(R.id.currentFileName);
-                        tv.setText(fileName);
-
-                        m_lastPath = lastPath;
-                        if(m_bound) {
-                            //Abort previously playing state
-                            boolean wasPlay = m_service.isPlaying();
-                            if(m_service.isPlaying())
-                                m_service.playerStop();
-                            if(!m_service.isReady())
-                            {
-                                if (!m_service.initPlayer())
-                                {
-                                    m_service.playerStop();
-                                    m_service.unInitPlayer();
-                                    AlertDialog.Builder b = new AlertDialog.Builder(Player.this);
-                                    b.setTitle("Failed to initialize player");
-                                    b.setMessage("Can't initialize player because of " + m_service.getLastError());
-                                    b.setNegativeButton(android.R.string.ok, null);
-                                    b.show();
-                                    m_lastFile = "";
-                                    return;
-                                }
-                            }
-                            m_lastFile = fileName;
-                            m_setup.edit().putString("lastPath", m_lastPath).apply();
-
-                            //Reload bank for a case if CMF file was passed that cleans custom bank
-                            m_service.reloadBank();
-                            if (!m_service.openMusic(m_lastFile)) {
-                                AlertDialog.Builder b = new AlertDialog.Builder(Player.this);
-                                b.setTitle("Failed to open file");
-                                b.setMessage("Can't open music file because of " + m_service.getLastError());
-                                b.setNegativeButton(android.R.string.ok, null);
-                                b.show();
-                                m_lastFile = "";
-                            } else {
-                                SeekBar musPos = (SeekBar) findViewById(R.id.musPos);
-                                musPos.setMax(m_service.getSongLength());
-                                musPos.setProgress(0);
-                                if (wasPlay)
-                                    m_service.playerStart();
-                            }
-                        }
+                        processMusicFile(fileName, lastPath);
                     }
                 });
         fileDialog.show();
+    }
+
+    private void handleFileIntent()
+    {
+        Uri url = getIntent().getData();
+        if(url != null)
+        {
+            String scheme = url.getScheme();
+            Log.d(LOG_TAG, "Got an URL: " + url + "; gonna check");
+            if(scheme != null && scheme.equals("file"))
+            {
+                String fileName = url.getPath();
+                processMusicFile(fileName, m_lastPath);
+            }
+        }
+    }
+
+    private void processMusicFile(String fileName, String lastPath)
+    {
+        Toast.makeText(getApplicationContext(), fileName, Toast.LENGTH_LONG).show();
+        TextView tv = (TextView) findViewById(R.id.currentFileName);
+        tv.setText(fileName);
+
+        m_lastPath = lastPath;
+        if(m_bound) {
+            //Abort previously playing state
+            boolean wasPlay = m_service.isPlaying();
+            if(m_service.isPlaying())
+                m_service.playerStop();
+            String m_lastFile;
+            if(!m_service.isReady())
+            {
+                if (!m_service.initPlayer())
+                {
+                    m_service.playerStop();
+                    m_service.unInitPlayer();
+                    AlertDialog.Builder b = new AlertDialog.Builder(Player.this);
+                    b.setTitle("Failed to initialize player");
+                    b.setMessage("Can't initialize player because of " + m_service.getLastError());
+                    b.setNegativeButton(android.R.string.ok, null);
+                    b.show();
+                    m_lastFile = "";
+                    return;
+                }
+            }
+            m_lastFile = fileName;
+            m_setup.edit().putString("lastPath", m_lastPath).apply();
+
+            //Reload bank for a case if CMF file was passed that cleans custom bank
+            m_service.reloadBank();
+            if (!m_service.openMusic(m_lastFile)) {
+                AlertDialog.Builder b = new AlertDialog.Builder(Player.this);
+                b.setTitle("Failed to open file");
+                b.setMessage("Can't open music file because of " + m_service.getLastError());
+                b.setNegativeButton(android.R.string.ok, null);
+                b.show();
+                m_lastFile = "";
+            } else {
+                SeekBar musPos = (SeekBar) findViewById(R.id.musPos);
+                musPos.setMax(m_service.getSongLength());
+                musPos.setProgress(0);
+                if (wasPlay)
+                    m_service.playerStart();
+            }
+        } else {
+            Log.d(LOG_TAG, "Woops, it's NOT BOUND!");
+        }
     }
 
     void onChipsCountUpdate(int chipsCount, boolean silent)

@@ -90,7 +90,7 @@ public class PlayerService extends Service {
     // This is the object that receives interactions from clients.
     private final IBinder mBinder = new LocalBinder();
 
-    public class LocalBinder extends Binder {
+    class LocalBinder extends Binder {
         PlayerService getService() {
             return PlayerService.this;
         }
@@ -145,29 +145,32 @@ public class PlayerService extends Service {
         {
             String action = intent.getAction();
 
-            switch (action)
+            if(action != null)
             {
-                case ACTION_START_FOREGROUND_SERVICE:
-                    startForegroundService();
-                    // Toast.makeText(getApplicationContext(), "Foreground service is started.", Toast.LENGTH_LONG).show();
-                    break;
-                case ACTION_STOP_FOREGROUND_SERVICE:
-                    playerStop();
-                    stopForegroundService();
-                    // Toast.makeText(getApplicationContext(), "Foreground service is stopped.", Toast.LENGTH_LONG).show();
-                    break;
-                case ACTION_PLAY:
-                    playerStart();
-                    // Toast.makeText(getApplicationContext(), "You click Play button.", Toast.LENGTH_LONG).show();
-                    break;
-                case ACTION_STOP:
-                    playerStop();
-                    stopForegroundService();
-                    break;
-                case ACTION_PAUSE:
-                    playerStop();
-                    // Toast.makeText(getApplicationContext(), "You click Pause button.", Toast.LENGTH_LONG).show();
-                    break;
+                switch (action)
+                {
+                    case ACTION_START_FOREGROUND_SERVICE:
+                        startForegroundService();
+                        // Toast.makeText(getApplicationContext(), "Foreground service is started.", Toast.LENGTH_LONG).show();
+                        break;
+                    case ACTION_STOP_FOREGROUND_SERVICE:
+                        playerStop();
+                        stopForegroundService();
+                        // Toast.makeText(getApplicationContext(), "Foreground service is stopped.", Toast.LENGTH_LONG).show();
+                        break;
+                    case ACTION_PLAY:
+                        playerStart();
+                        // Toast.makeText(getApplicationContext(), "You click Play button.", Toast.LENGTH_LONG).show();
+                        break;
+                    case ACTION_STOP:
+                        playerStop();
+                        stopForegroundService();
+                        break;
+                    case ACTION_PAUSE:
+                        playerStop();
+                        // Toast.makeText(getApplicationContext(), "You click Pause button.", Toast.LENGTH_LONG).show();
+                        break;
+                }
             }
         }
         // Toast.makeText(this, "service starting", Toast.LENGTH_SHORT).show();
@@ -178,7 +181,6 @@ public class PlayerService extends Service {
     private void startForegroundService()
     {
         // Log.d(TAG_FOREGROUND_SERVICE, "Start foreground service.");
-
         // Start foreground service.
         startForeground(FOREGROUND_ID, getNotify());
         m_isRunning = true;
@@ -186,8 +188,9 @@ public class PlayerService extends Service {
 
     private void stopForegroundService()
     {
-        Log.d(TAG_FOREGROUND_SERVICE, "Stop foreground service.");
-
+        if(!m_isRunning)
+            return;
+        // Log.d(TAG_FOREGROUND_SERVICE, "Stop foreground service.");
         // Stop foreground service and remove the notification.
         stopForeground(true);
 
@@ -506,7 +509,6 @@ public class PlayerService extends Service {
         m_lastFile = musicFile;
         if(m_isRunning && fileUpdated)
         {
-            m_lastFile = musicFile;
             NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             mNotificationManager.notify(FOREGROUND_ID, getNotify());
         }

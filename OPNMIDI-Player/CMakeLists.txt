@@ -22,10 +22,12 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -funwind-tables")
 
 set(libOPNMIDI_SHARED OFF)
 set(libOPNMIDI_STATIC ON)
-set(USE_NUKED_EMULATOR OFF) # For now is no way to toggle emulator from UI, use DosBox only
 set(WITH_MIDIPLAY OFF)
 set(WITH_VLC_PLUGIN OFF)
 set(WITH_OLD_UTILS OFF)
+set(USE_NUKED_EMULATOR ON) # Enabled on a fear and risk, it's too heavy for phones!
+set(USE_GX_EMULATOR ON) # Enable use of those experimental emulators
+set(USE_PMDWIN_EMULATOR ON)
 add_subdirectory(${OPNMIDI_JniBind_SOURCE_DIR}/src/main/cpp)
 
 add_library(OPNMIDI INTERFACE)

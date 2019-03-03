@@ -193,6 +193,38 @@ public class Player extends AppCompatActivity
 
 
             /*
+             * Emulator model combo-box
+             */
+            Spinner sEmulator = (Spinner) findViewById(R.id.emulatorType);
+            final String[] emulatorItems =
+            {
+                "Mame YM2612 OPN2 (accurate and fast)",
+                "Nuked OPN2 (very accurate and !HEAVY!)",
+                "GENS OPN2 (broken SSG-EG and envelopes)",
+                "Genesis Plus GX OPN2 (accurate and fast)",
+                "Neko Project II OPNA (semi-accurate and fast)",
+                "Mame YM2602 OPNA (accurate and fast)",
+                "PMDWin OPNA (experimental)"
+            };
+
+            ArrayAdapter<String> adapterEMU = new ArrayAdapter<String>(
+                    this, android.R.layout.simple_spinner_item, emulatorItems);
+            adapterEMU.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            sEmulator.setAdapter(adapterEMU);
+            sEmulator.setSelection(m_service.getEmulator());
+
+            sEmulator.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                public void onItemSelected(AdapterView<?> parent,
+                                           View itemSelected, int selectedItemPosition, long selectedId) {
+                    if(m_bound)
+                        m_service.setEmulator(selectedItemPosition);
+                }
+
+                public void onNothingSelected(AdapterView<?> parent) {
+                }
+            });
+
+            /*
              * Volume model combo-box
              */
             Spinner sVolModel = (Spinner) findViewById(R.id.volumeRangesModel);

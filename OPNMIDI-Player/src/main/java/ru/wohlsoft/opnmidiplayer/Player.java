@@ -201,10 +201,10 @@ public class Player extends AppCompatActivity
                 "Mame YM2612 OPN2 (accurate and fast)",
                 "Nuked OPN2 (very accurate and !HEAVY!)",
                 "GENS OPN2 (broken SSG-EG and envelopes)",
-                "Genesis Plus GX OPN2 (accurate and fast)",
+                "Genesis Plus GX OPN2 (EXPERIMENTAL)",
                 "Neko Project II OPNA (semi-accurate and fast)",
                 "Mame YM2602 OPNA (accurate and fast)",
-                "PMDWin OPNA (experimental)"
+                "PMDWin OPNA (EXPERIMENTAL)"
             };
 
             ArrayAdapter<String> adapterEMU = new ArrayAdapter<String>(

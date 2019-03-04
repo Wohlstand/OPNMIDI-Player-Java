@@ -203,7 +203,7 @@ public class Player extends AppCompatActivity
                 "GENS OPN2 (broken SSG-EG and envelopes)",
                 "Genesis Plus GX OPN2 (EXPERIMENTAL)",
                 "Neko Project II OPNA (semi-accurate and fast)",
-                "Mame YM2602 OPNA (accurate and fast)",
+                "Mame YM2608 OPNA (accurate and fast)",
                 "PMDWin OPNA (EXPERIMENTAL)"
             };
 

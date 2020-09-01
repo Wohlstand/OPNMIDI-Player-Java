@@ -1,7 +1,7 @@
 /*
  * BW_Midi_Sequencer - MIDI Sequencer for C++
  *
- * Copyright (c) 2015-2019 Vitaly Novichkov <admin@wohlnet.ru>
+ * Copyright (c) 2015-2020 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the "Software"),
@@ -45,12 +45,39 @@ typedef struct BW_MidiRtInterface
     /*! User data which will be passed through On-Event hook */
     void         *onEvent_userData;
 
+    /*! PCM render */
+    typedef void (*PcmRender)(void *userdata, uint8_t *stream, size_t length);
+    /*! PCM render hook which catches passing of loop start point */
+    PcmRender    onPcmRender;
+    /*! User data which will be passed through On-PCM-render hook */
+    void         *onPcmRender_userData;
+
+    //! Sample rate
+    uint32_t pcmSampleRate;
+
+    //! Size of one sample in bytes
+    uint32_t pcmFrameSize;
+
     /*! Library internal debug messages */
     typedef void (*DebugMessageHook)(void *userdata, const char *fmt, ...);
     /*! Debug message hook */
     DebugMessageHook onDebugMessage;
     /*! User data which will be passed through Debug Message hook */
     void *onDebugMessage_userData;
+
+    /*! Loop Start event hook */
+    typedef void (*LoopStartHook)(void *userdata);
+    /*! Loop start hook which catches passing of loop start point */
+    LoopStartHook onloopStart;
+    /*! User data which will be passed through On-LoopStart hook */
+    void         *onloopStart_userData;
+
+    /*! Loop Start event hook */
+    typedef void (*LoopEndHook)(void *userdata);
+    /*! Loop start hook which catches passing of loop start point */
+    LoopEndHook   onloopEnd;
+    /*! User data which will be passed through On-LoopStart hook */
+    void         *onloopEnd_userData;
 
     /*! MIDI Run Time event calls user data */
     void *rtUserData;

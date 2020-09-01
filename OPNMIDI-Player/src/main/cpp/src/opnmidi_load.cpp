@@ -2,7 +2,7 @@
  * libOPNMIDI is a free Software MIDI synthesizer library with OPN2 (YM2612) emulation
  *
  * MIDI parser and player (Original code from ADLMIDI): Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
- * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2019 Vitaly Novichkov <admin@wohlnet.ru>
+ * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2020 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
  * http://iki.fi/bisqwit/source/adlmidi.html
@@ -194,6 +194,13 @@ bool OPNMIDIplay::LoadMIDI_post()
     synth.reset(m_setup.emulator, m_setup.PCM_RATE, synth.chipFamily(), this); // Reset OPN2 chip
     m_chipChannels.clear();
     m_chipChannels.resize(synth.m_numChannels);
+#ifdef OPNMIDI_MIDI2VGM
+    m_sequencerInterface->onloopStart = synth.m_loopStartHook;
+    m_sequencerInterface->onloopStart_userData = synth.m_loopStartHookData;
+    m_sequencerInterface->onloopEnd = synth.m_loopEndHook;
+    m_sequencerInterface->onloopEnd_userData = synth.m_loopEndHookData;
+    m_sequencer->setLoopHooksOnly(m_sequencerInterface->onloopStart != NULL);
+#endif
 
     return true;
 }

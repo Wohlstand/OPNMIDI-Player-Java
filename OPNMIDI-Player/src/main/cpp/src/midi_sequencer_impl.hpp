@@ -1,7 +1,7 @@
 /*
  * BW_Midi_Sequencer - MIDI Sequencer for C++
  *
- * Copyright (c) 2015-2019 Vitaly Novichkov <admin@wohlnet.ru>
+ * Copyright (c) 2015-2020 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the "Software"),
@@ -46,6 +46,36 @@ typedef int64_t ssize_t;
 typedef int32_t ssize_t;
 #       endif
 #   endif
+#endif
+
+#if defined(_MSC_VER) && _MSC_VER < 1900
+
+#define snprintf c99_snprintf
+#define vsnprintf c99_vsnprintf
+
+__inline int c99_vsnprintf(char *outBuf, size_t size, const char *format, va_list ap)
+{
+    int count = -1;
+
+    if (size != 0)
+        count = _vsnprintf_s(outBuf, size, _TRUNCATE, format, ap);
+    if (count == -1)
+        count = _vscprintf(format, ap);
+
+    return count;
+}
+
+__inline int c99_snprintf(char *outBuf, size_t size, const char *format, ...)
+{
+    int count;
+    va_list ap;
+
+    va_start(ap, format);
+    count = c99_vsnprintf(outBuf, size, format, ap);
+    va_end(ap);
+
+    return count;
+}
 #endif
 
 #ifndef BWMIDI_DISABLE_MUS_SUPPORT
@@ -272,18 +302,20 @@ BW_MidiSequencer::BW_MidiSequencer() :
     m_smfFormat(0),
     m_loopFormat(Loop_Default),
     m_loopEnabled(false),
+    m_loopHooksOnly(false),
     m_fullSongTimeLength(0.0),
     m_postSongWaitDelay(1.0),
     m_loopStartTime(-1.0),
     m_loopEndTime(-1.0),
     m_tempoMultiplier(1.0),
     m_atEnd(false),
-    m_trackSolo(~(size_t)0),
+    m_trackSolo(~static_cast<size_t>(0)),
     m_triggerHandler(NULL),
     m_triggerUserData(NULL)
 {
     m_loop.reset();
     m_loop.invalidLoop = false;
+    m_time.init();
 }
 
 BW_MidiSequencer::~BW_MidiSequencer()
@@ -311,7 +343,54 @@ void BW_MidiSequencer::setInterface(const BW_MidiRtInterface *intrf)
     //System Exclusive hook is REQUIRED
     assert(intrf->rt_systemExclusive);
 
+    if(intrf->pcmSampleRate != 0 && intrf->pcmFrameSize != 0)
+    {
+        m_time.sampleRate = intrf->pcmSampleRate;
+        m_time.frameSize = intrf->pcmFrameSize;
+        m_time.reset();
+    }
+
     m_interface = intrf;
+}
+
+int BW_MidiSequencer::playStream(uint8_t *stream, size_t length)
+{
+    int count = 0;
+    size_t samples = static_cast<size_t>(length / static_cast<size_t>(m_time.frameSize));
+    size_t left = samples;
+    size_t periodSize = 0;
+    uint8_t *stream_pos = stream;
+
+    assert(m_interface->onPcmRender);
+
+    while(left > 0)
+    {
+        const double leftDelay = left / double(m_time.sampleRate);
+        const double maxDelay = m_time.timeRest < leftDelay ? m_time.timeRest : leftDelay;
+        if((positionAtEnd()) && (m_time.delay <= 0.0))
+            break;//Stop to fetch samples at reaching the song end with disabled loop
+
+        m_time.timeRest -= maxDelay;
+        periodSize = static_cast<size_t>(static_cast<double>(m_time.sampleRate) * maxDelay);
+
+        if(stream)
+        {
+            size_t generateSize = periodSize > left ? static_cast<size_t>(left) : static_cast<size_t>(periodSize);
+            m_interface->onPcmRender(m_interface->onPcmRender_userData, stream_pos, generateSize * m_time.frameSize);
+            stream_pos += generateSize * m_time.frameSize;
+            count += generateSize;
+            left -= generateSize;
+            assert(left <= samples);
+        }
+
+        if(m_time.timeRest <= 0.0)
+        {
+            m_time.delay = Tick(m_time.delay, m_time.minDelay);
+            m_time.timeRest += m_time.delay;
+        }
+    }
+
+    return count * static_cast<int>(m_time.frameSize);
 }
 
 BW_MidiSequencer::FileFormat BW_MidiSequencer::getFormat()
@@ -364,6 +443,11 @@ void BW_MidiSequencer::setLoopEnabled(bool enabled)
     m_loopEnabled = enabled;
 }
 
+void BW_MidiSequencer::setLoopHooksOnly(bool enabled)
+{
+    m_loopHooksOnly = enabled;
+}
+
 const std::string &BW_MidiSequencer::getMusicTitle()
 {
     return m_musTitle;
@@ -413,6 +497,7 @@ void BW_MidiSequencer::buildSmfSetupReset(size_t trackCount)
 
     m_loop.reset();
     m_loop.invalidLoop = false;
+    m_time.reset();
 
     m_currentPosition.began = false;
     m_currentPosition.absTimePosition = 0.0;
@@ -951,6 +1036,7 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
     unsigned caughLoopStart = 0;
     unsigned caughLoopStackStart = 0;
     unsigned caughLoopStackEnds = 0;
+    double   caughLoopStackEndsTime = 0.0;
     unsigned caughLoopStackBreaks = 0;
 
 #ifdef DEBUG_TIME_CALCULATION
@@ -983,12 +1069,18 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
 
                 if(m_loop.caughtStart)
                 {
+                    if(m_interface->onloopStart)//Loop Start hook
+                        m_interface->onloopStart(m_interface->onloopStart_userData);
+
                     caughLoopStart++;
                     m_loop.caughtStart = false;
                 }
 
                 if(m_loop.caughtStackStart)
                 {
+                    if(m_interface->onloopStart && (m_loopStartTime >= track.pos->time))//Loop Start hook
+                        m_interface->onloopStart(m_interface->onloopStart_userData);
+
                     caughLoopStackStart++;
                     m_loop.caughtStackStart = false;
                 }
@@ -1005,6 +1097,7 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
                     {
                         m_loop.caughtStackEnd = false;
                         caughLoopStackEnds++;
+                        caughLoopStackEndsTime = track.pos->time;
                     }
                     doLoopJump = true;
                     break;//Stop event handling on catching loopEnd event!
@@ -1094,6 +1187,15 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
             LoopStackEntry &s = m_loop.getCurStack();
             if(s.infinity)
             {
+                if(m_interface->onloopEnd && (m_loopEndTime >= caughLoopStackEndsTime))//Loop End hook
+                {
+                    m_interface->onloopEnd(m_interface->onloopEnd_userData);
+                    if(m_loopHooksOnly)//Stop song on reaching loop end
+                    {
+                        m_atEnd = true; //Don't handle events anymore
+                        m_currentPosition.wait += m_postSongWaitDelay;//One second delay until stop playing
+                    }
+                }
                 m_currentPosition = s.startPosition;
                 m_loop.skipStackStart = true;
                 return true;
@@ -1127,10 +1229,14 @@ bool BW_MidiSequencer::processEvents(bool isSeek)
 
     if(shortest_no || m_loop.caughtEnd)
     {
+        if(m_interface->onloopEnd)//Loop End hook
+            m_interface->onloopEnd(m_interface->onloopEnd_userData);
+
         //Loop if song end or loop end point has reached
         m_loop.caughtEnd         = false;
         shortest = 0;
-        if(!m_loopEnabled)
+
+        if(!m_loopEnabled || m_loopHooksOnly)
         {
             m_atEnd = true; //Don't handle events anymore
             m_currentPosition.wait += m_postSongWaitDelay;//One second delay until stop playing
@@ -1208,12 +1314,14 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
             if(m_musCopyright.empty())
             {
                 m_musCopyright = std::string((const char *)evt.data.data(), evt.data.size());
+                m_musCopyright.push_back('\0'); /* ending fix for UTF16 strings */
                 if(m_interface->onDebugMessage)
                     m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Music copyright: %s", m_musCopyright.c_str());
             }
             else if(m_interface->onDebugMessage)
             {
                 std::string str((const char *)evt.data.data(), evt.data.size());
+                str.push_back('\0'); /* ending fix for UTF16 strings */
                 m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Extra copyright event: %s", str.c_str());
             }
         }
@@ -1222,12 +1330,14 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
             if(m_musTitle.empty())
             {
                 m_musTitle = std::string((const char *)evt.data.data(), evt.data.size());
+                m_musTitle.push_back('\0'); /* ending fix for UTF16 strings */
                 if(m_interface->onDebugMessage)
                     m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Music title: %s", m_musTitle.c_str());
             }
             else
             {
                 std::string str((const char *)evt.data.data(), evt.data.size());
+                str.push_back('\0'); /* ending fix for UTF16 strings */
                 m_musTrackTitles.push_back(str);
                 if(m_interface->onDebugMessage)
                     m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Track title: %s", str.c_str());
@@ -1238,6 +1348,7 @@ BW_MidiSequencer::MidiEvent BW_MidiSequencer::parseEvent(const uint8_t **pptr, c
             if(m_interface->onDebugMessage)
             {
                 std::string str((const char *)evt.data.data(), evt.data.size());
+                str.push_back('\0'); /* ending fix for UTF16 strings */
                 m_interface->onDebugMessage(m_interface->onDebugMessage_userData, "Instrument: %s", str.c_str());
             }
         }
@@ -1545,7 +1656,7 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
     }
     else
     {
-        if(m_trackSolo != ~(size_t)0 && track != m_trackSolo)
+        if(m_trackSolo != ~static_cast<size_t>(0) && track != m_trackSolo)
             return;
         if(m_trackDisable[track])
             return;
@@ -1576,8 +1687,8 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
     {
         // Special event FF
         uint8_t  evtype = evt.subtype;
-        uint64_t length = (uint64_t)evt.data.size();
-        const char *data(length ? (const char *)evt.data.data() : "");
+        uint64_t length = static_cast<uint64_t>(evt.data.size());
+        const char *data(length ? reinterpret_cast<const char *>(evt.data.data()) : "");
 
         if(evtype == MidiEvent::ST_ENDTRACK)//End Of Track
         {
@@ -1628,8 +1739,8 @@ void BW_MidiSequencer::handleEvent(size_t track, const BW_MidiSequencer::MidiEve
                     m_loop.skipStackStart = false;
                     return;
                 }
-                LoopStackEntry &s = m_loop.stack[(m_loop.stackLevel + 1)];
-                s.loops = (int)data[0];
+                LoopStackEntry &s = m_loop.stack[static_cast<size_t>(m_loop.stackLevel + 1)];
+                s.loops = static_cast<int>(data[0]);
                 s.infinity = (data[0] == 0);
                 m_loop.caughtStackStart = true;
                 return;
@@ -1832,6 +1943,9 @@ double BW_MidiSequencer::seek(double seconds, const double granularity)
     if(m_currentPosition.wait < 0.0)
         m_currentPosition.wait = 0.0;
 
+    m_time.reset();
+    m_time.delay = m_currentPosition.wait;
+
     m_loopEnabled = loopFlagState;
     return m_currentPosition.wait;
 }
@@ -1863,6 +1977,7 @@ void BW_MidiSequencer::rewind()
 
     m_loop.reset();
     m_loop.caughtStart  = true;
+    m_time.reset();
 }
 
 void BW_MidiSequencer::setTempo(double tempo)
@@ -1942,14 +2057,14 @@ static bool detectIMF(const char *head, FileAndMemReader &fr)
     uint8_t raw[4];
     size_t end = static_cast<size_t>(head[0]) + 256 * static_cast<size_t>(head[1]);
 
-    if(!end || (end & 3))
+    if(end & 3)
         return false;
 
     size_t backup_pos = fr.tell();
     int64_t sum1 = 0, sum2 = 0;
-    fr.seek(2, FileAndMemReader::SET);
+    fr.seek((end > 0 ? 2 : 0), FileAndMemReader::SET);
 
-    for(unsigned n = 0; n < 42; ++n)
+    for(size_t n = 0; n < 16383; ++n)
     {
         if(fr.read(raw, 1, 4) != 4)
             break;
@@ -2108,7 +2223,11 @@ bool BW_MidiSequencer::parseIMF(FileAndMemReader &fr)
     event.absPosition = 0;
     event.data.resize(2);
 
-    fr.seek(2, FileAndMemReader::SET);
+    fr.seek((imfEnd > 0) ? 2 : 0, FileAndMemReader::SET);
+
+    if(imfEnd == 0) // IMF Type 0 with unlimited file length
+        imfEnd = fr.fileSize();
+
     while(fr.tell() < imfEnd && !fr.eof())
     {
         if(fr.read(imfRaw, 1, 4) != 4)

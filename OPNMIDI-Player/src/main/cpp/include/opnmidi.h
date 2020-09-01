@@ -2,7 +2,7 @@
  * libOPNMIDI is a free Software MIDI synthesizer library with OPN2 (YM2612) emulation
  *
  * MIDI parser and player (Original code from ADLMIDI): Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
- * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2019 Vitaly Novichkov <admin@wohlnet.ru>
+ * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2020 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
  * http://iki.fi/bisqwit/source/adlmidi.html
@@ -38,6 +38,9 @@ extern "C" {
         OPNMIDI_TOSTR(OPNMIDI_VERSION_MAJOR) "." \
         OPNMIDI_TOSTR(OPNMIDI_VERSION_MINOR) "." \
         OPNMIDI_TOSTR(OPNMIDI_VERSION_PATCHLEVEL)
+
+#define OPN_OPN2_SAMPLE_RATE        53267
+#define OPN_OPNA_SAMPLE_RATE        55466
 
 #include <stddef.h>
 
@@ -509,6 +512,8 @@ enum Opn2_Emulator
     OPNMIDI_EMU_MAME_2608,
     /*! PMDWin OPNA */
     OPNMIDI_EMU_PMDWIN,
+    /*! VGM file dumper (required for MIDI2VGM) */
+    OPNMIDI_VGM_DUMPER,
     /*! Count instrument on the level */
     OPNMIDI_EMU_end
 };
@@ -592,6 +597,8 @@ extern OPNMIDI_DECLSPEC const char *opn2_errorInfo(struct OPN2_MIDIPlayer *devic
  * Tip 1: You can initialize multiple instances and run them in parallel
  * Tip 2: Library is NOT thread-safe, therefore don't use same instance in different threads or use mutexes
  * Tip 3: Changing of sample rate on the fly is not supported. Re-create the instance again.
+ * Top 4: To generate output in OPN2 or OPNA chip native sample rate, please initialize it with sample rate
+ *        value as `OPN_OPN2_SAMPLE_RATE` or `OPN_OPNA_SAMPLE_RATE` in dependence on the chip
  *
  * @param sample_rate Output sample rate
  * @return Instance of the library. If NULL was returned, check the `adl_errorString` message for more info.

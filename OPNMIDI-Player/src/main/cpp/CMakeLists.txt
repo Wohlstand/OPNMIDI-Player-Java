@@ -8,9 +8,15 @@ set(CMAKE_C_STANDARD 90)
 # Prefer C++98 standard
 set(CMAKE_CXX_STANDARD 98)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+endif()
+if(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+endif()
+if(NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+endif()
 
 #===========================================================================================
 # Strip garbage
@@ -26,7 +32,8 @@ elseif(NOT MSVC AND NOT MSDOS AND NOT OPENBSD_LOCALBASE)
     if(ANDROID)
         set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -funwind-tables")
         set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -funwind-tables")
-    else()
+    endif()
+    if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -s -Wl,--gc-sections -Wl,-s")
         set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s -Wl,--gc-sections -Wl,-s")
         set(LINK_FLAGS_RELEASE  "${LINK_FLAGS_RELEASE} -Wl,--gc-sections -Wl,-s")
@@ -115,13 +122,17 @@ option(USE_GX_EMULATOR      "Use Genesis Plus GX emulator (experimental)" OFF)
 option(USE_NP2_EMULATOR     "Use Neko Project II emulator" ON)
 option(USE_MAME_2608_EMULATOR "Use MAME YM2608 emulator" ON)
 option(USE_PMDWIN_EMULATOR  "Use PMDWin emulator (experimental)" OFF)
+option(USE_VGM_FILE_DUMPER  "Use VGM File Dumper (required to build the MIDI2VGM tool)" ON)
 # WIP FEATURES
 # option(WITH_CPP_EXTRAS      "Build with support for C++ extras (features are can be found in 'adlmidi.hpp' header)" OFF)
 
 option(WITH_MIDIPLAY        "Build also demo MIDI player" OFF)
+option(WITH_MIDI2VGM        "Build also MIDI to VGM converter tool" OFF)
 option(WITH_VLC_PLUGIN      "Build also a plugin for VLC Media Player" OFF)
 option(VLC_PLUGIN_NOINSTALL "Don't install VLC plugin into VLC directory" OFF)
 option(WITH_DAC_UTIL        "Build also OPN2 DAC testing utility" OFF)
+
+option(WITH_EXTRA_BANKS     "Install extra bank files" OFF)
 
 set(libOPNMIDI_INSTALLS)
 
@@ -232,6 +243,13 @@ else()
     add_definitions(-DOPNMIDI_DISABLE_PMDWIN_EMULATOR)
 endif()
 
+if(USE_VGM_FILE_DUMPER)
+    list(APPEND libOPNMIDI_SOURCES
+        ${libOPNMIDI_SOURCE_DIR}/src/chips/vgm_file_dumper.cpp)
+    set(HAS_EMULATOR TRUE)
+    add_definitions(-DOPNMIDI_MIDI2VGM)
+endif()
+
 if(NOT HAS_EMULATOR)
     message(FATAL_ERROR "No emulators enabled! You must enable at least one emulator!")
 endif()
@@ -248,7 +266,11 @@ endif()
 # === Static library ====
 if(libOPNMIDI_STATIC OR WITH_VLC_PLUGIN)
     add_library(OPNMIDI_static STATIC ${libOPNMIDI_SOURCES})
-    set_target_properties(OPNMIDI_static PROPERTIES OUTPUT_NAME OPNMIDI)
+    if(WIN32 AND libOPNMIDI_SHARED)
+        set_target_properties(OPNMIDI_static PROPERTIES OUTPUT_NAME OPNMIDI-static)
+    else()
+        set_target_properties(OPNMIDI_static PROPERTIES OUTPUT_NAME OPNMIDI)
+    endif()
     target_include_directories(OPNMIDI_static PUBLIC ${libOPNMIDI_SOURCE_DIR}/include)
     set_legacy_standard(OPNMIDI_static)
     set_visibility_hidden(OPNMIDI_static)
@@ -262,6 +284,10 @@ endif()
 if(libOPNMIDI_SHARED)
     add_library(OPNMIDI_shared SHARED ${libOPNMIDI_SOURCES})
     set_target_properties(OPNMIDI_shared PROPERTIES OUTPUT_NAME OPNMIDI)
+    set_target_properties(OPNMIDI_shared PROPERTIES
+        VERSION ${libOPNMIDI_VERSION}
+        SOVERSION ${libOPNMIDI_VERSION_MAJOR}
+    )
     target_include_directories(OPNMIDI_shared PUBLIC ${libOPNMIDI_SOURCE_DIR}/include)
     set_legacy_standard(OPNMIDI_shared)
     set_visibility_hidden(OPNMIDI_shared)
@@ -297,71 +323,25 @@ else()
   target_link_libraries(OPNMIDI_IF INTERFACE OPNMIDI_static)
 endif()
 
-if(WITH_MIDIPLAY OR WITH_DAC_UTIL)
-    find_library(SDL2_LIBRARY SDL2 REQUIRED)
-    include_directories(${SDL2_INCLUDE_DIR})
-    message("Found ${SDL2_LIBRARY}")
-
-    set(SDL2_NEEDED_LIBRARIES)
-    if(WIN32)
-        if(MSVC)
-            list(APPEND SDL2_NEEDED_LIBRARIES ${SDL2_LIBRARY})
-        else()
-            list(APPEND SDL2_NEEDED_LIBRARIES ${SDL2_LIBRARY} pthread)
-        endif()
-    else()
-        list(APPEND SDL2_NEEDED_LIBRARIES ${SDL2_LIBRARY} pthread)
-        if(NOT HAIKU AND NOT OPENBSD_LOCALBASE)
-            list(APPEND SDL2_NEEDED_LIBRARIES dl)
-        endif()
-        list(APPEND SDL2_NEEDED_LIBRARIES m stdc++)
-    endif()
-    if(OPENBSD_LOCALBASE)
-        list(REMOVE_ITEM SDL2_NEEDED_LIBRARIES dl)
-    endif()
-
-endif()
-
 if(WITH_MIDIPLAY)
-    add_executable(opnmidiplay
-        ${libOPNMIDI_SOURCE_DIR}/utils/midiplay/opnplay.cpp
-        ${libOPNMIDI_SOURCE_DIR}/utils/midiplay/wave_writer.c
-        # ${libOPNMIDI_SOURCE_DIR}/utils/midiplay/wave_writer.c # WIP
-    )
-    target_link_libraries(opnmidiplay OPNMIDI_IF ${SDL2_NEEDED_LIBRARIES})
-
-    if(libOPNMIDI_SHARED)
-        add_dependencies(opnmidiplay OPNMIDI_shared)
-        set_target_properties(opnmidiplay PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
-    else()
-        if(NOT libOPNMIDI_STATIC)
-            message(FATAL_ERROR "libOPNMIDI is required to be built!")
-        endif()
-        add_dependencies(opnmidiplay OPNMIDI_static)
-    endif()
-
-    if(NOT WIN32 AND NOT APPLE)
-        install(FILES ${libOPNMIDI_SOURCE_DIR}/fm_banks/xg.wopn DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/opnmidiplay/)
-    endif()
-
-    list(APPEND libOPNMIDI_INSTALLS opnmidiplay)
+    add_subdirectory(utils/midiplay)
 endif()
 
+if(WITH_MIDI2VGM)
+    if(NOT USE_VGM_FILE_DUMPER)
+        message(FATAL_ERROR "To build MIDI to VGM converter, you must enable -DUSE_VGM_FILE_DUMPER=ON flag!")
+    endif()
+    add_subdirectory(utils/midi2vgm)
+endif()
+
+add_subdirectory(utils/wopn2hpp)
 
 if(WITH_VLC_PLUGIN)
     add_subdirectory(utils/vlc_codec)
 endif()
 
 if(WITH_DAC_UTIL)
-    add_executable(dac_test
-        ${libOPNMIDI_SOURCE_DIR}/utils/dac_test/dac_test.cpp
-        ${libOPNMIDI_SOURCE_DIR}/src/chips/nuked_opn2.cpp
-        ${libOPNMIDI_SOURCE_DIR}/src/chips/nuked/ym3438.c
-    )
-    target_include_directories(dac_test PRIVATE
-            ${libOPNMIDI_SOURCE_DIR}/src/chips/
-    )
-    target_link_libraries(dac_test ${SDL2_NEEDED_LIBRARIES})
+    add_subdirectory(utils/dac_test)
 endif()
 
 if(WITH_HQ_RESAMPLER)
@@ -372,9 +352,6 @@ if(WITH_HQ_RESAMPLER)
     endif()
     if(libOPNMIDI_STATIC OR WITH_VLC_PLUGIN)
         target_link_libraries(OPNMIDI_static PUBLIC "${ZITA_RESAMPLER_LIBRARY}")
-    endif()
-    if(WITH_DAC_UTIL)
-        target_link_libraries(dac_test "${ZITA_RESAMPLER_LIBRARY}")
     endif()
 endif()
 
@@ -388,6 +365,24 @@ install(FILES
         include/opnmidi.h
         #include/opnmidi.hpp # WIP
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+if(WITH_EXTRA_BANKS AND NOT APPLE)
+    file(GLOB WOPN_FILES ${libOPNMIDI_SOURCE_DIR}/fm_banks/*.wopn)
+    install(FILES ${WOPN_FILES}
+            DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/sounds/wopn")
+
+    file(GLOB WOPNTXT_FILES ${libOPNMIDI_SOURCE_DIR}/fm_banks/*.txt)
+    install(FILES ${WOPNTXT_FILES}
+            DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/doc/libOPNMIDI/wopn")
+endif()
+
+file(GLOB DOCTXT_FILES
+    "${libOPNMIDI_SOURCE_DIR}/docs/*.txt"
+    "${libOPNMIDI_SOURCE_DIR}/LICENSE*.txt"
+    README.md AUTHORS
+)
+install(FILES ${DOCTXT_FILES}
+        DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/doc/libOPNMIDI")
 
 if(NOT ANDROID)
     configure_file(libOPNMIDI.pc.in libOPNMIDI.pc @ONLY)
@@ -428,8 +423,12 @@ message("USE_GX_EMULATOR          = ${USE_GX_EMULATOR}")
 message("USE_NP2_EMULATOR         = ${USE_NP2_EMULATOR}")
 message("USE_MAME_2608_EMULATOR   = ${USE_MAME_2608_EMULATOR}")
 message("USE_PMDWIN_EMULATOR      = ${USE_PMDWIN_EMULATOR}")
+message("USE_VGM_FILE_DUMPER      = ${USE_VGM_FILE_DUMPER}")
 
 message("===== Utils and extras =====")
 message("WITH_MIDIPLAY            = ${WITH_MIDIPLAY}")
 message("WITH_VLC_PLUGIN          = ${WITH_VLC_PLUGIN}")
 message("WITH_DAC_UTIL            = ${WITH_DAC_UTIL}")
+if(NOT APPLE)
+    message("WITH_EXTRA_BANKS         = ${WITH_EXTRA_BANKS}")
+endif()

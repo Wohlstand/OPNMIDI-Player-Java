@@ -14,8 +14,8 @@ import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.content.LocalBroadcastManager;
+import androidx.core.app.NotificationCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.util.Log;
 
 import java.io.IOException;
@@ -154,15 +154,11 @@ public class PlayerService extends Service {
                         startForegroundService();
                         // Toast.makeText(getApplicationContext(), "Foreground service is started.", Toast.LENGTH_LONG).show();
                         break;
-                    case ACTION_STOP_FOREGROUND_SERVICE:
-                        playerStop();
-                        stopForegroundService();
-                        // Toast.makeText(getApplicationContext(), "Foreground service is stopped.", Toast.LENGTH_LONG).show();
-                        break;
                     case ACTION_PLAY:
                         playerStart();
                         // Toast.makeText(getApplicationContext(), "You click Play button.", Toast.LENGTH_LONG).show();
                         break;
+                    case ACTION_STOP_FOREGROUND_SERVICE:
                     case ACTION_STOP:
                         playerStop();
                         stopForegroundService();
@@ -220,6 +216,8 @@ public class PlayerService extends Service {
         bigTextStyle.bigText("Playing " + m_lastFile);
         // Set big text style.
         builder.setStyle(bigTextStyle);
+
+        builder.setNotificationSilent();
 
         builder.setWhen(System.currentTimeMillis());
         builder.setContentTitle(getResources().getString(R.string.app_name));

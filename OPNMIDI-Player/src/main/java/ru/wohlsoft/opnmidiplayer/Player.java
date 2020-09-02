@@ -610,9 +610,11 @@ public class Player extends AppCompatActivity
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
         if (grantResults.length == 1 &&
-                permissions[0].equals(Manifest.permission.READ_EXTERNAL_STORAGE) &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED
+            permissions[0].equals(Manifest.permission.READ_EXTERNAL_STORAGE) &&
+            grantResults[0] == PackageManager.PERMISSION_GRANTED
         ) {
             if (requestCode == READ_PERMISSION_FOR_BANK) {
                 openBankDialog();
@@ -622,7 +624,6 @@ public class Player extends AppCompatActivity
                 handleFileIntent();
             }
         }
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
 

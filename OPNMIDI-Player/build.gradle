@@ -7,8 +7,8 @@ android {
         applicationId "ru.wohlsoft.opnmidiplayer"
         minSdkVersion 14
         targetSdkVersion 29
-        versionCode 1050000
-        versionName '1.5.0.0'
+        versionCode 1050001
+        versionName '1.5.0.1'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         externalNativeBuild {
             cmake {
@@ -58,6 +58,6 @@ dependencies {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
     implementation 'androidx.appcompat:appcompat:1.2.0'
-    compileOnly 'junit:junit:4.12'
+    compileOnly 'junit:junit:4.13'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.1'
 }

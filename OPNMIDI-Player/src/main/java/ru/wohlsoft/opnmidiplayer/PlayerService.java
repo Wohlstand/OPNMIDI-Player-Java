@@ -126,10 +126,10 @@ public class PlayerService extends Service {
 
             int importance = NotificationManager.IMPORTANCE_LOW;
 
-            NotificationChannel mChannel = null;
-            mChannel = new NotificationChannel(channel_id, getResources().getString(R.string.app_name), importance);
-
+            NotificationChannel mChannel = new NotificationChannel(channel_id, getResources().getString(R.string.app_name), importance);
             mNotificationManager.createNotificationChannel(mChannel);
+
+            startForeground(FOREGROUND_ID, getNotify());
         }
     }
 
@@ -645,7 +645,7 @@ public class PlayerService extends Service {
 
 
     /**
-     * A native method that is implemented by the 'native-lib' native library,
+     * A native method that is implemented by the 'opnmidi-jni' native library,
      * which is packaged with this application.
      */
     public static native String stringFromJNI();
@@ -743,8 +743,8 @@ public class PlayerService extends Service {
     public static native double adl_positionTell(long device);
 
 
-    // Used to load the 'native-lib' library on application startup.
+    // Used to load the 'opnmidi-jni' library on application startup.
     static {
-        System.loadLibrary("native-lib");
+        System.loadLibrary("opnmidi-jni");
     }
 }

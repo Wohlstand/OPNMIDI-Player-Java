@@ -10,9 +10,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
 import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -28,7 +28,7 @@ public class PlayerService extends Service {
 
     private SharedPreferences   m_setup = null;
 
-    private static final String TAG_FOREGROUND_SERVICE = "FOREGROUND_SERVICE";
+//    private static final String TAG_FOREGROUND_SERVICE = "FOREGROUND_SERVICE";
 
     // The id of the channel.
     private static final String channel_id = "opnmidi_channel_01";
@@ -40,7 +40,7 @@ public class PlayerService extends Service {
     public static final String ACTION_PLAY  = "ACTION_PLAY";
     public static final String ACTION_STOP  = "ACTION_STOP";
 
-    public final int            BUF_SIZE = 10240;
+//    public final int            BUF_SIZE = 10240;
     private long                MIDIDevice = 0;
     private volatile boolean    m_isPlaying = false;
     private volatile boolean    m_isRunning = false;
@@ -67,25 +67,36 @@ public class PlayerService extends Service {
     //! Cache of previously sent seek position
     private int                 m_lastSeekPosition = -1;
 
-    private class SeekSyncThread extends AsyncTask<Integer, Void, Void> {
-        @Override
-        protected Void doInBackground(Integer... params) {
-            while(!isCancelled()) {
-                try {
-                    Thread.sleep(1000);
-                    updateSeekBar(getPosition());
-                } catch (InterruptedException e) {
-                    //e.printStackTrace();
-                }
-            }
-            return null;
+
+    public static final int SEEK_TIMER_DELAY = 1000;
+
+    private Handler     m_seekerTimer = null;
+    private Runnable    m_seekerRunnable = null;
+
+    private void startSeekerTimer() {
+        if (m_seekerTimer == null) {
+            m_seekerTimer = new Handler();
         }
+        if(m_seekerRunnable == null) {
+            m_seekerRunnable = new Runnable()
+            {
+                public void run()
+                {
+                    updateSeekBar(getPosition());
+                    m_seekerTimer.postDelayed(this, SEEK_TIMER_DELAY);
+                }
+            };
+        }
+        m_seekerTimer.postDelayed(m_seekerRunnable, SEEK_TIMER_DELAY);
     }
 
-    private SeekSyncThread m_seekSyncThread = null;
+    private void stopSeekerTimer() {
+        if(m_seekerTimer != null && m_seekerRunnable != null)
+            m_seekerTimer.removeCallbacks(m_seekerRunnable);
+    }
 
     public PlayerService() {
-        Log.d(LOG_TAG, "constrUKT");
+        Log.d(LOG_TAG, "Construct");
     }
 
     // This is the object that receives interactions from clients.
@@ -137,6 +148,7 @@ public class PlayerService extends Service {
     public void onDestroy() {
         super.onDestroy();
         Log.d(LOG_TAG, "onDestroy");
+        stopSeekerTimer();
         stopForeground(true);
     }
 
@@ -148,7 +160,7 @@ public class PlayerService extends Service {
 
             if(action != null)
             {
-                switch (action)
+                switch(action)
                 {
                     case ACTION_START_FOREGROUND_SERVICE:
                         startForegroundService();
@@ -171,7 +183,7 @@ public class PlayerService extends Service {
             }
         }
         // Toast.makeText(this, "service starting", Toast.LENGTH_SHORT).show();
-        return super.onStartCommand(intent,flags,startId);
+        return super.onStartCommand(intent, flags, startId);
     }
 
     /* Used to build and start foreground service. */
@@ -179,8 +191,8 @@ public class PlayerService extends Service {
     {
         // Log.d(TAG_FOREGROUND_SERVICE, "Start foreground service.");
         // Start foreground service.
-        startForeground(FOREGROUND_ID, getNotify());
         m_isRunning = true;
+        startForeground(FOREGROUND_ID, getNotify());
     }
 
     private void stopForegroundService()
@@ -210,12 +222,14 @@ public class PlayerService extends Service {
             builder.setChannelId(channel_id);
         }
 
-        // Make notification show big text.
-        NotificationCompat.BigTextStyle bigTextStyle = new NotificationCompat.BigTextStyle();
-        bigTextStyle.setBigContentTitle(getResources().getString(R.string.app_name));
-        bigTextStyle.bigText("Playing " + m_lastFile);
-        // Set big text style.
-        builder.setStyle(bigTextStyle);
+        if(m_isRunning) {
+            // Make notification show big text.
+            NotificationCompat.BigTextStyle bigTextStyle = new NotificationCompat.BigTextStyle();
+            bigTextStyle.setBigContentTitle(getResources().getString(R.string.app_name));
+            bigTextStyle.bigText("Playing " + m_lastFile);
+            // Set big text style.
+            builder.setStyle(bigTextStyle);
+        }
 
         builder.setNotificationSilent();
 
@@ -226,46 +240,51 @@ public class PlayerService extends Service {
         Bitmap largeIconBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher);
         builder.setLargeIcon(largeIconBitmap);
         // Make the notification max priority.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            builder.setPriority(NotificationManager.IMPORTANCE_LOW);
+        }
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
             builder.setPriority(Notification.PRIORITY_MAX);
         }
         // Make head-up notification.
-        builder.setFullScreenIntent(pendingIntent, true);
+        builder.setFullScreenIntent(pendingIntent, m_isRunning);
 
-        Intent openUI = new Intent(getApplicationContext(), Player.class);
-        openUI.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent pendingOpenUiIntent = PendingIntent.getActivity(getApplicationContext(), 0, openUI, 0);
-        builder.setContentIntent(pendingOpenUiIntent);
+        if(m_isRunning) {
+            Intent openUI = new Intent(getApplicationContext(), Player.class);
+            openUI.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            PendingIntent pendingOpenUiIntent = PendingIntent.getActivity(getApplicationContext(), 0, openUI, 0);
+            builder.setContentIntent(pendingOpenUiIntent);
 
-        // Add Play button intent in notification.
-        Intent playIntent = new Intent(this, PlayerService.class);
-        playIntent.setAction(ACTION_PLAY);
-        PendingIntent pendingPlayIntent = PendingIntent.getService(this, 0, playIntent, 0);
-        NotificationCompat.Action playAction = new NotificationCompat.Action(android.R.drawable.ic_media_play, "Play", pendingPlayIntent);
-        builder.addAction(playAction);
+            // Add Play button intent in notification.
+            Intent playIntent = new Intent(this, PlayerService.class);
+            playIntent.setAction(ACTION_PLAY);
+            PendingIntent pendingPlayIntent = PendingIntent.getService(this, 0, playIntent, 0);
+            NotificationCompat.Action playAction = new NotificationCompat.Action(android.R.drawable.ic_media_play, "Play", pendingPlayIntent);
+            builder.addAction(playAction);
 
-        // Add Pause button intent in notification.
-        Intent pauseIntent = new Intent(this, PlayerService.class);
-        pauseIntent.setAction(ACTION_PAUSE);
-        PendingIntent pendingPrevIntent = PendingIntent.getService(this, 0, pauseIntent, 0);
-        NotificationCompat.Action prevAction = new NotificationCompat.Action(android.R.drawable.ic_media_pause, "Pause", pendingPrevIntent);
-        builder.addAction(prevAction);
+            // Add Pause button intent in notification.
+            Intent pauseIntent = new Intent(this, PlayerService.class);
+            pauseIntent.setAction(ACTION_PAUSE);
+            PendingIntent pendingPrevIntent = PendingIntent.getService(this, 0, pauseIntent, 0);
+            NotificationCompat.Action prevAction = new NotificationCompat.Action(android.R.drawable.ic_media_pause, "Pause", pendingPrevIntent);
+            builder.addAction(prevAction);
 
-        // Add Stop button intent in notification.
-        Intent stopIntent = new Intent(this, PlayerService.class);
-        stopIntent.setAction(ACTION_STOP);
-        PendingIntent pendingStopIntent = PendingIntent.getService(this, 0, stopIntent, 0);
-        NotificationCompat.Action stopAction = new NotificationCompat.Action(android.R.drawable.ic_menu_close_clear_cancel, "Stop", pendingStopIntent);
-        builder.addAction(stopAction);
+            // Add Stop button intent in notification.
+            Intent stopIntent = new Intent(this, PlayerService.class);
+            stopIntent.setAction(ACTION_STOP);
+            PendingIntent pendingStopIntent = PendingIntent.getService(this, 0, stopIntent, 0);
+            NotificationCompat.Action stopAction = new NotificationCompat.Action(android.R.drawable.ic_menu_close_clear_cancel, "Stop", pendingStopIntent);
+            builder.addAction(stopAction);
+        }
 
         // Build the notification.
         return builder.build();
     }
 
-    public boolean isServiceReady()
-    {
-        return m_isInit;
-    }
+//    public boolean isServiceReady()
+//    {
+//        return m_isInit;
+//    }
 
     public void loadSetup(SharedPreferences setup)
     {
@@ -535,56 +554,51 @@ public class PlayerService extends Service {
     }
     public boolean hasLoadedMusic()
     {
-        return !m_lastFile.isEmpty();
+        return m_lastFile.length() > 0;
     }
 
     public boolean isPlaying() {
         return m_isPlaying;
     }
 
-    public boolean togglePlayPause() {
-        if(!m_isPlaying)
+    public void togglePlayPause() {
+        if(m_isPlaying)
         {
-            return playerStart();
+            playerStop();
         } else {
-            return playerStop();
+            playerStart();
         }
     }
 
-    public boolean playerRestart() {
+    public void playerRestart() {
         if(m_isPlaying)
             playerStop();
         reloadBank();
         applySetup();
         openMusic(m_lastFile);
-        return playerStart();
+        playerStart();
     }
 
-    public boolean playerStart() {
+    public void playerStart() {
         if(MIDIDevice == 0) {
-            return false;
+            return;
         }
         if(!m_isPlaying) {
             m_isPlaying = true;
             startPlaying(MIDIDevice);
-            m_seekSyncThread = new SeekSyncThread();
-            m_seekSyncThread.execute(0);
+            startSeekerTimer();
         }
-        return true;
     }
 
-    public boolean playerStop() {
+    public void playerStop() {
         if(MIDIDevice == 0) {
-            return false;
+            return;
         }
         if(m_isPlaying) {
             m_isPlaying = false;
             stopPlaying();
-            if(m_seekSyncThread != null)
-                m_seekSyncThread.cancel(true);
-            m_seekSyncThread = null;
+            stopSeekerTimer();
         }
-        return true;
     }
 
 

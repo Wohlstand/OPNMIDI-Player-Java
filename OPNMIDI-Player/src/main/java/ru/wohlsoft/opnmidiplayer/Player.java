@@ -62,11 +62,12 @@ public class Player extends AppCompatActivity
 
     private int                 m_chipsCount = 2;
 
-    private BroadcastReceiver mBroadcastReceiver= new BroadcastReceiver() {
+    private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             String intentType = intent.getStringExtra("INTENT_TYPE");
-            if(intentType.equalsIgnoreCase("SEEKBAR_RESULT")){
+            assert intentType != null;
+            if(intentType.equalsIgnoreCase("SEEKBAR_RESULT")) {
                 int percentage = intent.getIntExtra("PERCENTAGE", -1);
                 SeekBar musPos = findViewById(R.id.musPos);
                 if(percentage >= 0)
@@ -174,7 +175,7 @@ public class Player extends AppCompatActivity
                 File f = new File(m_lastBankPath);
                 cbl.setText(f.getName());
             } else {
-                cbl.setText("<No custom bank>");
+                cbl.setText(R.string.noCustomBankLabel);
             }
 
             /*
@@ -206,7 +207,7 @@ public class Player extends AppCompatActivity
                 "PMDWin OPNA (EXPERIMENTAL)"
             };
 
-            ArrayAdapter<String> adapterEMU = new ArrayAdapter<String>(
+            ArrayAdapter<String> adapterEMU = new ArrayAdapter<>(
                     this, android.R.layout.simple_spinner_item, emulatorItems);
             adapterEMU.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             sEmulator.setAdapter(adapterEMU);
@@ -229,7 +230,7 @@ public class Player extends AppCompatActivity
             Spinner sVolModel = (Spinner) findViewById(R.id.volumeRangesModel);
             final String[] volumeModelItems = {"[Auto]", "Generic", "CMF", "DMX", "Apogee", "9X" };
 
-            ArrayAdapter<String> adapterVM = new ArrayAdapter<String>(
+            ArrayAdapter<String> adapterVM = new ArrayAdapter<>(
                     this, android.R.layout.simple_spinner_item, volumeModelItems);
             adapterVM.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             sVolModel.setAdapter(adapterVM);
@@ -423,8 +424,8 @@ public class Player extends AppCompatActivity
 
         m_lastPath              = m_setup.getString("lastPath", m_lastPath);
 
-        Button quitb = (Button) findViewById(R.id.quitapp);
-        quitb.setOnClickListener(new View.OnClickListener() {
+        Button quitBut = (Button) findViewById(R.id.quitapp);
+        quitBut.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Log.d(LOG_TAG, "Quit: Trying to stop seeker");
@@ -520,7 +521,7 @@ public class Player extends AppCompatActivity
             alert.setView(input);
 
             if(m_bound) {
-                input.setText(Double.toString(m_service.gainingGet()));
+                input.setText(String.format(Locale.getDefault(), "%g", m_service.gainingGet()));
             }
 
             alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
@@ -574,12 +575,16 @@ public class Player extends AppCompatActivity
 
     private boolean checkFilePermissions(int requestCode)
     {
-        if( (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) &&
-                (ContextCompat.checkSelfPermission(this,
-                        Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) )
+        final int grant = PackageManager.PERMISSION_GRANTED;
+
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN)
         {
+            final String exStorage = Manifest.permission.READ_EXTERNAL_STORAGE;
+            if((ContextCompat.checkSelfPermission(this, exStorage) == grant))
+                return false;
+
             // Should we show an explanation?
-            if(ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_EXTERNAL_STORAGE))
+            if(ActivityCompat.shouldShowRequestPermissionRationale(this, exStorage))
             {
                 // Show an expanation to the user *asynchronously* -- don't block
                 // this thread waiting for the user's response! After the user
@@ -595,7 +600,7 @@ public class Player extends AppCompatActivity
             else
             {
                 // No explanation needed, we can request the permission.
-                ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.READ_EXTERNAL_STORAGE}, requestCode);
+                ActivityCompat.requestPermissions(this, new String[] { exStorage }, requestCode);
                 //MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE
                 // MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE is an
                 // app-defined int constant. The callback method gets the
@@ -636,7 +641,6 @@ public class Player extends AppCompatActivity
 
     public void openBankDialog()
     {
-
         File file = new File(m_lastBankPath);
         OpenFileDialog fileDialog = new OpenFileDialog(this)
                 .setFilter(".*\\.wopn")
@@ -654,7 +658,7 @@ public class Player extends AppCompatActivity
                             File f = new File(m_lastBankPath);
                             cbl.setText(f.getName());
                         } else {
-                            cbl.setText("<No custom bank>");
+                            cbl.setText(R.string.noCustomBankLabel);
                         }
                         if(m_bound)
                             m_service.openBank(m_lastBankPath);
@@ -673,15 +677,15 @@ public class Player extends AppCompatActivity
     public void openMusicFileDialog()
     {
         OpenFileDialog fileDialog = new OpenFileDialog(this)
-                .setFilter(".*\\.mid|.*\\.midi|.*\\.kar|.*\\.rmi|.*\\.mus|.*\\.xmi")
-                .setCurrentDirectory(m_lastPath)
-                .setOpenDialogListener(new OpenFileDialog.OpenDialogListener()
-                {
-                    @Override
-                    public void OnSelectedFile(String fileName, String lastPath) {
-                        processMusicFile(fileName, lastPath);
-                    }
-                });
+            .setFilter(".*\\.mid|.*\\.midi|.*\\.kar|.*\\.rmi|.*\\.mus|.*\\.xmi")
+            .setCurrentDirectory(m_lastPath)
+            .setOpenDialogListener(new OpenFileDialog.OpenDialogListener()
+            {
+                @Override
+                public void OnSelectedFile(String fileName, String lastPath) {
+                    processMusicFile(fileName, lastPath);
+                }
+            });
         fileDialog.show();
     }
 
@@ -728,7 +732,7 @@ public class Player extends AppCompatActivity
             boolean wasPlay = m_service.isPlaying();
             if(m_service.isPlaying())
                 m_service.playerStop();
-            String m_lastFile;
+            String lastFile;
             if(!m_service.isReady())
             {
                 if (!m_service.initPlayer())
@@ -740,22 +744,20 @@ public class Player extends AppCompatActivity
                     b.setMessage("Can't initialize player because of " + m_service.getLastError());
                     b.setNegativeButton(android.R.string.ok, null);
                     b.show();
-                    m_lastFile = "";
                     return;
                 }
             }
-            m_lastFile = fileName;
+            lastFile = fileName;
             m_setup.edit().putString("lastPath", m_lastPath).apply();
 
             //Reload bank for a case if CMF file was passed that cleans custom bank
             m_service.reloadBank();
-            if (!m_service.openMusic(m_lastFile)) {
+            if (!m_service.openMusic(lastFile)) {
                 AlertDialog.Builder b = new AlertDialog.Builder(Player.this);
                 b.setTitle("Failed to open file");
                 b.setMessage("Can't open music file because of " + m_service.getLastError());
                 b.setNegativeButton(android.R.string.ok, null);
                 b.show();
-                m_lastFile = "";
             } else {
                 SeekBar musPos = (SeekBar) findViewById(R.id.musPos);
                 musPos.setMax(m_service.getSongLength());

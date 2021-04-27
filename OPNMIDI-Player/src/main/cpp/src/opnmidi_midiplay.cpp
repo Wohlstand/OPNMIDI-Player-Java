@@ -2,7 +2,7 @@
  * libOPNMIDI is a free Software MIDI synthesizer library with OPN2 (YM2612) emulation
  *
  * MIDI parser and player (Original code from ADLMIDI): Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
- * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2020 Vitaly Novichkov <admin@wohlnet.ru>
+ * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2021 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
  * http://iki.fi/bisqwit/source/adlmidi.html
@@ -24,7 +24,9 @@
 #include "opnmidi_midiplay.hpp"
 #include "opnmidi_opn2.hpp"
 #include "opnmidi_private.hpp"
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
 #include "midi_sequencer.hpp"
+#endif
 #include "chips/opn_chip_base.h"
 
 // Minimum life time of percussion notes
@@ -34,7 +36,8 @@ enum { MasterVolumeDefault = 127 };
 
 inline bool isXgPercChannel(uint8_t msb, uint8_t lsb)
 {
-    return (msb == 0x7E || msb == 0x7F) && (lsb == 0);
+    ADL_UNUSED(lsb);
+    return (msb == 0x7E || msb == 0x7F);
 }
 
 void OPNMIDIplay::OpnChannel::addAge(int64_t us)
@@ -86,6 +89,7 @@ OPNMIDIplay::OPNMIDIplay(unsigned long sampleRate) :
     //m_setup.SkipForward = 0;
     m_setup.ScaleModulators     = 0;
     m_setup.fullRangeBrightnessCC74 = false;
+    m_setup.enableAutoArpeggio = true;
     m_setup.delay = 0.0;
     m_setup.carry = 0.0;
     m_setup.tick_skip_samples_delay = 0;
@@ -338,7 +342,7 @@ bool OPNMIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocit
             // Let XG Percussion bank will use (0...127 LSB range in WOPN file)
 
             // Choose: SFX or Drum Kits
-            bank = midiins + ((bank == 0x7E00) ? 128 : 0);
+            bank = midiins + ((midiChan.bank_msb == 0x7E) ? 128 : 0);
         }
         else
         {
@@ -354,31 +358,55 @@ bool OPNMIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocit
 
     //Set bank bank
     const Synth::Bank *bnk = NULL;
-    if((bank & static_cast<size_t>(~static_cast<uint16_t>(Synth::PercussionTag))) > 0)
+    bool caughtMissingBank = false;
+    if((bank & ~static_cast<uint16_t>(Synth::PercussionTag)) > 0)
     {
         Synth::BankMap::iterator b = synth.m_insBanks.find(bank);
         if(b != synth.m_insBanks.end())
             bnk = &b->second;
-
         if(bnk)
             ains = &bnk->ins[midiins];
-        else if(hooks.onDebugMessage)
+        else
+            caughtMissingBank = true;
+    }
+
+    //Or fall back to bank ignoring LSB (GS/XG)
+    if(ains->flags & OpnInstMeta::Flag_NoSound)
+    {
+        size_t fallback = bank & ~(size_t)0x7F;
+        if(fallback != bank)
         {
-            std::set<size_t> &missing = (isPercussion) ?
-                                          caugh_missing_banks_percussion : caugh_missing_banks_melodic;
-            const char *text = (isPercussion) ?
-                               "percussion" : "melodic";
-            if(missing.insert(bank).second)
-                hooks.onDebugMessage(hooks.onDebugMessage_userData, "[%i] Playing missing %s MIDI bank %i (patch %i)", channel, text, bank, midiins);
+            Synth::BankMap::iterator b = synth.m_insBanks.find(fallback);
+            caughtMissingBank = false;
+            if(b != synth.m_insBanks.end())
+                bnk = &b->second;
+            if(bnk)
+                ains = &bnk->ins[midiins];
+            else
+                caughtMissingBank = true;
         }
     }
+
+    if(caughtMissingBank && hooks.onDebugMessage)
+    {
+        std::set<size_t> &missing = (isPercussion) ?
+                                    caugh_missing_banks_percussion : caugh_missing_banks_melodic;
+        const char *text = (isPercussion) ?
+                           "percussion" : "melodic";
+        if(missing.insert(bank).second)
+        {
+            hooks.onDebugMessage(hooks.onDebugMessage_userData,
+                                 "[%i] Playing missing %s MIDI bank %i (patch %i)",
+                                 channel, text, (bank & ~static_cast<uint16_t>(Synth::PercussionTag)), midiins);
+        }
+    }
+
     //Or fall back to first bank
-    if(ains->flags & OpnInstMeta::Flag_NoSound)
+    if((ains->flags & OpnInstMeta::Flag_NoSound) != 0)
     {
         Synth::BankMap::iterator b = synth.m_insBanks.find(bank & Synth::PercussionTag);
         if(b != synth.m_insBanks.end())
             bnk = &b->second;
-
         if(bnk)
             ains = &bnk->ins[midiins];
     }
@@ -406,13 +434,10 @@ bool OPNMIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocit
 
     if(ains->drumTone)
     {
-        /*if(ains.tone < 20)
-            tone += ains.tone;
-        else*/
-        if(ains->drumTone < 128)
-            tone = ains->drumTone;
+        if(ains->drumTone >= 128)
+            tone = ains->drumTone - 128;
         else
-            tone -= ains->drumTone - 128;
+            tone = ains->drumTone;
     }
 
     MIDIchannel::NoteInfo::Phys voices[MIDIchannel::NoteInfo::MaxNumPhysChans] = {
@@ -448,7 +473,7 @@ bool OPNMIDIplay::realTime_NoteOn(uint8_t channel, uint8_t note, uint8_t velocit
         return false;
     }
 
-    // Allocate AdLib channel (the physical sound channel for the note)
+    // Allocate OPN2 channel (the physical sound channel for the note)
     int32_t adlchannel[MIDIchannel::NoteInfo::MaxNumPhysChans] = { -1, -1 };
 
     for(uint32_t ccount = 0; ccount < MIDIchannel::NoteInfo::MaxNumPhysChans; ++ccount)
@@ -1383,6 +1408,9 @@ void OPNMIDIplay::killOrEvacuate(size_t from_channel,
     {
         uint16_t cs = static_cast<uint16_t>(c);
 
+        if(!m_setup.enableAutoArpeggio)
+            break; // Arpeggio disabled completely
+
         if(c >= maxChannels)
             break;
         if(c == from_channel)
@@ -1604,7 +1632,7 @@ size_t OPNMIDIplay::chooseDevice(const std::string &name)
     size_t n = m_midiDevices.size() * 16;
     m_midiDevices.insert(std::make_pair(name, n));
     m_midiChannels.resize(n + 16);
-    resetMIDIDefaults(n);
+    resetMIDIDefaults(static_cast<int>(n));
     return n;
 }
 
@@ -1615,9 +1643,16 @@ void OPNMIDIplay::updateArpeggio(double) // amount = amount of time passed
 
     Synth &synth = *m_synth;
 
-    #if 0
+    if(!m_setup.enableAutoArpeggio) // Arpeggio was disabled
+    {
+        if(m_arpeggioCounter != 0)
+            m_arpeggioCounter = 0;
+        return;
+    }
+
+#if 0
     const unsigned desired_arpeggio_rate = 40; // Hz (upper limit)
-    #if 1
+#   if 1
     static unsigned cache = 0;
     amount = amount; // Ignore amount. Assume we get a constant rate.
     cache += MaxSamplesAtTime * desired_arpeggio_rate;
@@ -1625,15 +1660,15 @@ void OPNMIDIplay::updateArpeggio(double) // amount = amount of time passed
     if(cache < PCM_RATE) return;
 
     cache %= PCM_RATE;
-    #else
+#   else
     static double arpeggio_cache = 0;
     arpeggio_cache += amount * desired_arpeggio_rate;
 
     if(arpeggio_cache < 1.0) return;
 
     arpeggio_cache = 0.0;
-    #endif
-    #endif
+#   endif
+#endif
 
     ++m_arpeggioCounter;
 

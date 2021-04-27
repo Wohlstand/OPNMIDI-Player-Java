@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.2)
-project(libOPNMIDI VERSION 1.4.0 LANGUAGES C CXX)
+project(libOPNMIDI VERSION 1.5.1 LANGUAGES C CXX)
 
 include(GNUInstallDirs)
 
@@ -134,6 +134,10 @@ option(WITH_DAC_UTIL        "Build also OPN2 DAC testing utility" OFF)
 
 option(WITH_EXTRA_BANKS     "Install extra bank files" OFF)
 
+if(WIN32)
+    option(WITH_WINMMDRV    "Build a WinMM MIDI driver" OFF)
+endif()
+
 set(libOPNMIDI_INSTALLS)
 
 include_directories(${libOPNMIDI_SOURCE_DIR}/include)
@@ -169,7 +173,7 @@ endif()
 if(USE_GENS_EMULATOR)
     list(APPEND libOPNMIDI_SOURCES
         ${libOPNMIDI_SOURCE_DIR}/src/chips/gens_opn2.cpp
-        ${libOPNMIDI_SOURCE_DIR}/src/chips/gens/Ym2612_Emu.cpp
+        ${libOPNMIDI_SOURCE_DIR}/src/chips/gens/Ym2612.cpp
     )
     set(HAS_EMULATOR TRUE)
 else()
@@ -258,11 +262,6 @@ if(NOT WITH_MIDI_SEQUENCER)
     add_definitions(-DOPNMIDI_DISABLE_MIDI_SEQUENCER)
 endif()
 
-# WIP
-#if(NOT WITH_CPP_EXTRAS)
-#    add_definitions(-DADLMIDI_DISABLE_CPP_EXTRAS)
-#endif()
-
 # === Static library ====
 if(libOPNMIDI_STATIC OR WITH_VLC_PLUGIN)
     add_library(OPNMIDI_static STATIC ${libOPNMIDI_SOURCES})
@@ -334,7 +333,7 @@ if(WITH_MIDI2VGM)
     add_subdirectory(utils/midi2vgm)
 endif()
 
-if(NOT ANDROID)
+if(NOT ANDROID AND NOT EMSCRIPTEN)
     add_subdirectory(utils/wopn2hpp)
 endif()
 
@@ -344,6 +343,10 @@ endif()
 
 if(WITH_DAC_UTIL)
     add_subdirectory(utils/dac_test)
+endif()
+
+if(WIN32 AND WITH_WINMMDRV)
+    add_subdirectory(utils/winmm_drv)
 endif()
 
 if(WITH_HQ_RESAMPLER)
@@ -431,6 +434,9 @@ message("===== Utils and extras =====")
 message("WITH_MIDIPLAY            = ${WITH_MIDIPLAY}")
 message("WITH_VLC_PLUGIN          = ${WITH_VLC_PLUGIN}")
 message("WITH_DAC_UTIL            = ${WITH_DAC_UTIL}")
+if(WIN32)
+    message("WITH_WINMMDRV            = ${WITH_WINMMDRV}")
+endif()
 if(NOT APPLE)
     message("WITH_EXTRA_BANKS         = ${WITH_EXTRA_BANKS}")
 endif()

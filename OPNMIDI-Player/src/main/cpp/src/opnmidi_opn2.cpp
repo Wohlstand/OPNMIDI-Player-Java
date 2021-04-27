@@ -2,7 +2,7 @@
  * libOPNMIDI is a free Software MIDI synthesizer library with OPN2 (YM2612) emulation
  *
  * MIDI parser and player (Original code from ADLMIDI): Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
- * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2020 Vitaly Novichkov <admin@wohlnet.ru>
+ * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2021 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
  * http://iki.fi/bisqwit/source/adlmidi.html
@@ -400,7 +400,7 @@ void OPN2::touchNote(size_t c,
         if(volume > minVolume)
         {
             double lv = std::log(static_cast<double>(volume));
-            volume = static_cast<uint_fast32_t>(lv * c1 - c2) * 2.0;
+            volume = static_cast<uint_fast32_t>(lv * c1 - c2) * 2;
         }
         else
             volume = 0;

@@ -12,6 +12,7 @@
         android:supportsRtl="true"
         android:requestLegacyExternalStorage="true"
         android:theme="@style/Theme.AppCompat.NoActionBar">
+
         <activity android:name=".Player">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -26,8 +27,14 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="file" />
-                <data android:scheme="content" />
+                <data android:scheme="file"/>
+                <data android:scheme="ftp"/>
+                <data android:scheme="ftps"/>
+                <data android:scheme="sftp"/>
+                <data android:scheme="content"/>
+                <data android:scheme="http"/>
+                <data android:scheme="https"/>
+                <data android:scheme="smb"/>
                 <data android:host="*" />
 
                 <data android:mimeType="audio/mid" />
@@ -47,6 +54,7 @@
                 <data android:mimeType="application/x-midi" />
                 <data android:mimeType="application/x-mid" />
                 <data android:mimeType="application/x-midi" />
+                <data android:mimeType="application/x-wopn" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -54,8 +62,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="file" />
-                <data android:scheme="content" />
+                <data android:scheme="file"/>
+                <data android:scheme="ftp"/>
+                <data android:scheme="content"/>
+                <data android:scheme="http"/>
+                <data android:scheme="https"/>
                 <data android:host="*" />
 
                 <data android:pathPattern=".*\\.mid" />
@@ -74,6 +85,9 @@
                 <data android:pathPattern=".*\\.MUS" />
                 <data android:pathPattern=".*\\.xmi" />
                 <data android:pathPattern=".*\\.XMI" />
+
+                <data android:pathPattern=".*\\.wopn" />
+                <data android:pathPattern=".*\\.WOPN" />
             </intent-filter>
         </activity>
 

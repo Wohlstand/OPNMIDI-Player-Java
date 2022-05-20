@@ -2,7 +2,7 @@
  * libOPNMIDI is a free Software MIDI synthesizer library with OPN2 (YM2612) emulation
  *
  * MIDI parser and player (Original code from ADLMIDI): Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
- * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2021 Vitaly Novichkov <admin@wohlnet.ru>
+ * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2022 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
  * http://iki.fi/bisqwit/source/adlmidi.html
@@ -79,14 +79,14 @@ OPNMIDI_EXPORT int opn2_setDeviceIdentifier(OPN2_MIDIPlayer *device, unsigned id
     return 0;
 }
 
-OPNMIDI_EXPORT int opn2_setNumChips(OPN2_MIDIPlayer *device, int numCards)
+OPNMIDI_EXPORT int opn2_setNumChips(OPN2_MIDIPlayer *device, int numChips)
 {
     if(device == NULL)
         return -2;
 
     MidiPlayer *play = GET_MIDI_PLAYER(device);
     assert(play);
-    play->m_setup.numChips = static_cast<unsigned int>(numCards);
+    play->m_setup.numChips = static_cast<unsigned int>(numChips);
     if(play->m_setup.numChips < 1 || play->m_setup.numChips > OPN_MAX_CHIPS)
     {
         play->setErrorString("number of chips may only be 1.." OPN_MAX_CHIPS_STR ".\n");
@@ -407,6 +407,21 @@ OPNMIDI_EXPORT void opn2_setLoopEnabled(OPN2_MIDIPlayer *device, int loopEn)
     ADL_UNUSED(loopEn);
 #endif
 }
+
+OPNMIDI_EXPORT void opn2_setLoopCount(OPN2_MIDIPlayer *device, int loopCount)
+{
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
+    if(!device)
+        return;
+    MidiPlayer *play = GET_MIDI_PLAYER(device);
+    assert(play);
+    play->m_sequencer->setLoopsCount(loopCount);
+#else
+    ADL_UNUSED(device);
+    ADL_UNUSED(loopCount);
+#endif
+}
+
 
 OPNMIDI_EXPORT void opn2_setSoftPanEnabled(OPN2_MIDIPlayer *device, int softPanEn)
 {
@@ -1270,6 +1285,25 @@ OPNMIDI_EXPORT int opn2_setTrackOptions(struct OPN2_MIDIPlayer *device, size_t t
     ADL_UNUSED(device);
     ADL_UNUSED(trackNumber);
     ADL_UNUSED(trackOptions);
+    return -1;
+#endif
+}
+
+OPNMIDI_EXPORT int opn2_setChannelEnabled(struct OPN2_MIDIPlayer *device, size_t channelNumber, int enabled)
+{
+#ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
+    if(!device)
+        return -1;
+    MidiPlayer *play = GET_MIDI_PLAYER(device);
+    assert(play);
+    MidiSequencer &seq = *play->m_sequencer;
+    if(!seq.setChannelEnabled(channelNumber, (bool)enabled))
+        return -1;
+    return 0;
+#else
+    ADL_UNUSED(device);
+    ADL_UNUSED(channelNumber);
+    ADL_UNUSED(enabled);
     return -1;
 #endif
 }

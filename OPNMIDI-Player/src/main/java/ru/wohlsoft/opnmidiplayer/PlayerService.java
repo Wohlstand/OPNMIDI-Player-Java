@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 public class PlayerService extends Service {
-    private static int FOREGROUND_ID=4478;
+    private static final int FOREGROUND_ID = 4478;
     private static final String NOTIFICATION_ID = "OPNMIDI-Player";
     final String LOG_TAG = "PlayerService";
 

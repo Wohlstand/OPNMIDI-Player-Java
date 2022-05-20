@@ -2,7 +2,7 @@
  * libOPNMIDI is a free Software MIDI synthesizer library with OPN2 (YM2612) emulation
  *
  * MIDI parser and player (Original code from ADLMIDI): Copyright (c) 2010-2014 Joel Yliluoma <bisqwit@iki.fi>
- * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2021 Vitaly Novichkov <admin@wohlnet.ru>
+ * OPNMIDI Library and YM2612 support:   Copyright (c) 2017-2022 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Library is based on the ADLMIDI, a MIDI player for Linux and Windows with OPL3 emulation:
  * http://iki.fi/bisqwit/source/adlmidi.html
@@ -186,7 +186,7 @@ struct OPN2_MIDIPlayer
  * @param numChips Count of virtual chips to emulate
  * @return 0 on success, <0 when any error has occurred
  */
-extern OPNMIDI_DECLSPEC int  opn2_setNumChips(struct OPN2_MIDIPlayer *device, int numCards);
+extern OPNMIDI_DECLSPEC int  opn2_setNumChips(struct OPN2_MIDIPlayer *device, int numChips);
 
 /**
  * @brief Get current number of emulated chips
@@ -430,6 +430,16 @@ extern OPNMIDI_DECLSPEC void opn2_setAutoArpeggio(struct OPN2_MIDIPlayer *device
  * @param loopEn 0 - disabled, 1 - enabled
  */
 extern OPNMIDI_DECLSPEC void opn2_setLoopEnabled(struct OPN2_MIDIPlayer *device, int loopEn);
+
+/**
+ * @brief Set how many times loop will be played
+ *
+ * Note: The song will be played once if loop has been disabled with no matter which value of loop count was set
+ *
+ * @param device Instance of the library
+ * @param loopCount Number of loops or -1 to loop infinitely
+ */
+extern OPNMIDI_DECLSPEC void opn2_setLoopCount(struct OPN2_MIDIPlayer *device, int loopCount);
 
 /**
  * @brief Enable or disable soft panning with chip emulators
@@ -913,6 +923,15 @@ enum OPNMIDI_TrackOptions
  * @return 0 on success, <0 when any error has occurred
  */
 extern OPNMIDI_DECLSPEC int opn2_setTrackOptions(struct OPN2_MIDIPlayer *device, size_t trackNumber, unsigned trackOptions);
+
+/**
+ * @brief Sets the channel of the current sequence enable state
+ * @param device Instance of the library
+ * @param channelNumber Number of the channel (from 0 to 15)
+ * @param enabled 1 to enable and 0 to disable
+ * @return 0 on success, <0 when any error has occurred
+ */
+extern OPNMIDI_DECLSPEC int opn2_setChannelEnabled(struct OPN2_MIDIPlayer *device, size_t channelNumber, int enabled);
 
 
 

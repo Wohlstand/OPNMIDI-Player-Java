@@ -1,6 +1,7 @@
 package ru.wohlsoft.opnmidiplayer;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.ContentResolver;
@@ -39,6 +40,11 @@ import androidx.core.app.ActivityCompat;
 import android.widget.Toast;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Locale;
@@ -639,8 +645,19 @@ public class Player extends AppCompatActivity
         openBankDialog();
     }
 
+    private final int REQ_OPEN_BANK = 42;
+
     public void openBankDialog()
     {
+//        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+//        {
+//            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+//            intent.addCategory(Intent.CATEGORY_OPENABLE);
+//            intent.setType("*/*");
+//            startActivityForResult(intent, REQ_OPEN_BANK);
+//        }
+//        else
+//        {
         File file = new File(m_lastBankPath);
         OpenFileDialog fileDialog = new OpenFileDialog(this)
                 .setFilter(".*\\.wopn")
@@ -650,22 +667,92 @@ public class Player extends AppCompatActivity
                 .setOpenDialogListener(new OpenFileDialog.OpenDialogListener()
                 {
                     @Override
-                    public void OnSelectedFile(String fileName, String lastPath) {
+                    public void OnSelectedFile(String fileName, String lastPath)
+                    {
                         m_lastBankPath = fileName;
 
                         TextView cbl = (TextView) findViewById(R.id.bankFileName);
-                        if(!m_lastBankPath.isEmpty()) {
+                        if (!m_lastBankPath.isEmpty())
+                        {
                             File f = new File(m_lastBankPath);
                             cbl.setText(f.getName());
-                        } else {
+                        }
+                        else
+                        {
                             cbl.setText(R.string.noCustomBankLabel);
                         }
-                        if(m_bound)
+                        if (m_bound)
                             m_service.openBank(m_lastBankPath);
                     }
                 });
         fileDialog.show();
+//        }
     }
+
+//    public static void copy(File src, File dst) throws IOException
+//    {
+//        InputStream in = new FileInputStream(src);
+//        try
+//        {
+//            OutputStream out = new FileOutputStream(dst);
+//            try
+//            {
+//                // Transfer bytes from in to out
+//                byte[] buf = new byte[1024];
+//                int len;
+//                while ((len = in.read(buf)) > 0) {
+//                    out.write(buf, 0, len);
+//                }
+//            } finally {
+//                out.close();
+//            }
+//        } finally {
+//            in.close();
+//        }
+//    }
+//
+//    @Override
+//    public void onActivityResult(int requestCode, int resultCode,Intent resultData)
+//    {
+//        super.onActivityResult(requestCode, resultCode, resultData);
+//
+//        if (requestCode == REQ_OPEN_BANK && resultCode == Activity.RESULT_OK)
+//        {
+//            Uri uri = null;
+//            if (resultData != null)
+//            {
+//                uri = resultData.getData();
+//                String rPath = RealPathUtil.getRealPath(this, uri);
+//                File in = new File(rPath);
+//                File outFile = new File(getExternalFilesDir(null), in.getName());
+//
+//                try
+//                {
+//                    copy(in, outFile);
+//                }
+//                catch (IOException e)
+//                {
+//                    e.printStackTrace();
+//                }
+//
+//                m_lastBankPath = outFile.getPath();
+//
+//                TextView cbl = (TextView) findViewById(R.id.bankFileName);
+//                if (!m_lastBankPath.isEmpty())
+//                {
+//                    File f = new File(m_lastBankPath);
+//                    cbl.setText(f.getName());
+//                }
+//                else
+//                {
+//                    cbl.setText(R.string.noCustomBankLabel);
+//                }
+//
+//                if (m_bound)
+//                    m_service.openBank(m_lastBankPath);
+//            }
+//        }
+//    }
 
     public void OnOpenFileClick(View view) {
         // Here, thisActivity is the current activity
@@ -695,6 +782,7 @@ public class Player extends AppCompatActivity
         String scheme = intent.getScheme();
         if(scheme != null)
         {
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             if(checkFilePermissions(READ_PERMISSION_FOR_INTENT))
                 return;
             if(scheme.equals(ContentResolver.SCHEME_FILE))

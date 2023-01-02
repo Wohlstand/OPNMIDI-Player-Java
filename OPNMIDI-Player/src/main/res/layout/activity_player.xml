@@ -115,6 +115,7 @@
             android:text="@string/autoArpeggio"
             tools:text="@string/autoArpeggio" />
 
+
         <TextView
             android:id="@+id/emulatorTypeLabel"
             android:layout_width="wrap_content"

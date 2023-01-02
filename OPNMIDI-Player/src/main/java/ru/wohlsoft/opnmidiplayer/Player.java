@@ -307,9 +307,9 @@ public class Player extends AppCompatActivity
             public void onItemSelected(AdapterView<?> parent,
                                        View itemSelected, int selectedItemPosition, long selectedId)
             {
-                AppSettings.setChanAllocMode(selectedItemPosition);
+                AppSettings.setChanAllocMode(selectedItemPosition - 1);
                 if(m_bound)
-                    m_service.setChanAllocMode(selectedItemPosition);
+                    m_service.setChanAllocMode(selectedItemPosition - 1);
             }
 
             public void onNothingSelected(AdapterView<?> parent) {

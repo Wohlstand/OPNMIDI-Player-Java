@@ -218,6 +218,7 @@ OPN2::OPN2() :
     m_masterVolume(MasterVolumeDefault),
     m_musicMode(MODE_MIDI),
     m_volumeScale(VOLUME_Generic),
+    m_channelAlloc(OPNMIDI_ChanAlloc_AUTO),
     m_lfoEnable(false),
     m_lfoFrequency(0),
     m_chipFamily(OPNChip_OPN2)
@@ -226,6 +227,7 @@ OPN2::OPN2() :
     m_insBankSetup.lfoEnable = false;
     m_insBankSetup.lfoFrequency = 0;
     m_insBankSetup.chipType = OPNChip_OPN2;
+    m_insBankSetup.mt32defaults = false;
 
     // Initialize blank instruments banks
     m_insBanks.clear();
@@ -541,6 +543,7 @@ void OPN2::setVolumeScaleModel(OPNMIDI_VolumeModels volumeModel)
 {
     switch(volumeModel)
     {
+    default:
     case OPNMIDI_VolumeModel_AUTO://Do nothing until restart playing
         break;
 

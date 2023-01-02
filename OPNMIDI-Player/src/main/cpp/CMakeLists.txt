@@ -107,7 +107,7 @@ function(set_visibility_hidden destTarget)
 endfunction()
 #===========================================================================================
 
-if(VITA OR 3DS)
+if(VITA OR NINTENDO_3DS OR NINTENDO_WII OR NINTENDO_WIIU)
     set(DEFAULT_HEAVY_EMULATORS OFF)
 else()
     set(DEFAULT_HEAVY_EMULATORS ON)
@@ -115,7 +115,10 @@ endif()
 
 if(NOT EMSCRIPTEN
    AND NOT VITA
-   AND NOT 3DS
+   AND NOT NINTENDO_3DS
+   AND NOT NINTENDO_WII
+   AND NOT NINTENDO_WIIU
+   AND NOT NINTENDO_SWITCH
    AND NOT MSDOS)
     option(libOPNMIDI_STATIC   "Build static library of libOPNMIDI" ON)
     option(libOPNMIDI_SHARED   "Build shared library of libOPNMIDI" OFF)
@@ -141,6 +144,7 @@ option(USE_VGM_FILE_DUMPER  "Use VGM File Dumper (required to build the MIDI2VGM
 
 option(WITH_MIDIPLAY        "Build also demo MIDI player" OFF)
 option(WITH_MIDI2VGM        "Build also MIDI to VGM converter tool" OFF)
+option(WITH_WOPN2HPP        "Build also the WOPN to C++ header source converter tool" OFF)
 option(WITH_VLC_PLUGIN      "Build also a plugin for VLC Media Player" OFF)
 option(VLC_PLUGIN_NOINSTALL "Don't install VLC plugin into VLC directory" OFF)
 option(WITH_DAC_UTIL        "Build also OPN2 DAC testing utility" OFF)
@@ -167,6 +171,24 @@ list(APPEND libOPNMIDI_SOURCES
     ${libOPNMIDI_SOURCE_DIR}/src/opnmidi_private.cpp
     ${libOPNMIDI_SOURCE_DIR}/src/wopn/wopn_file.c
 )
+
+# Make headers being properly visible at IDEs
+file(GLOB libOPNMIDI_HEADERS
+    ${libOPNMIDI_SOURCE_DIR}/include/*.h
+    ${libOPNMIDI_SOURCE_DIR}/src/*.h
+    ${libOPNMIDI_SOURCE_DIR}/src/*.hpp
+    ${libOPNMIDI_SOURCE_DIR}/src/wopn/*.h
+    ${libOPNMIDI_SOURCE_DIR}/src/structures/*.hpp
+    ${libOPNMIDI_SOURCE_DIR}/src/chips/*.h
+    ${libOPNMIDI_SOURCE_DIR}/src/chips/gens/*.hpp
+    ${libOPNMIDI_SOURCE_DIR}/src/chips/gx/*.h
+    ${libOPNMIDI_SOURCE_DIR}/src/chips/mame/*.h
+    ${libOPNMIDI_SOURCE_DIR}/src/chips/mamefm/*.h
+    ${libOPNMIDI_SOURCE_DIR}/src/chips/np2/*.h
+    ${libOPNMIDI_SOURCE_DIR}/src/chips/nuked/*.h
+    ${libOPNMIDI_SOURCE_DIR}/src/chips/pmdwin/*.h
+)
+list(APPEND libOPNMIDI_SOURCES ${libOPNMIDI_HEADERS})
 
 if(WITH_MIDI_SEQUENCER)
     list(APPEND libOPNMIDI_SOURCES
@@ -277,7 +299,9 @@ endif()
 
 if(NOT WIN32
    AND NOT VITA
-   AND NOT 3DS
+   AND NOT NINTENDO_3DS
+   AND NOT NINTENDO_WII
+   AND NOT NINTENDO_WIIU
    AND NOT EMSCRIPTEN
    AND NOT MSDOS)
     option(ENABLE_FPIC "Build static libraries as position independent code" ON)
@@ -365,7 +389,7 @@ if(WITH_MIDI2VGM)
     add_subdirectory(utils/midi2vgm)
 endif()
 
-if(NOT ANDROID AND NOT EMSCRIPTEN AND NOT VITA AND NOT 3DS)
+if(WITH_WOPN2HPP)
     add_subdirectory(utils/wopn2hpp)
 endif()
 
@@ -464,6 +488,7 @@ message("USE_VGM_FILE_DUMPER      = ${USE_VGM_FILE_DUMPER}")
 
 message("===== Utils and extras =====")
 message("WITH_MIDIPLAY            = ${WITH_MIDIPLAY}")
+message("WITH_WOPN2HPP            = ${WITH_WOPN2HPP}")
 message("WITH_VLC_PLUGIN          = ${WITH_VLC_PLUGIN}")
 message("WITH_DAC_UTIL            = ${WITH_DAC_UTIL}")
 if(WIN32)

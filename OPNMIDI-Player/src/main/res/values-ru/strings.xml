@@ -23,4 +23,6 @@
     <string name="run_at_pcm_rate">Работа на PCM-частоте (Легче для ЦПУ)</string>
     <string name="emulatorType">Эмулятор OPN2/OPNA</string>
     <string name="noCustomBankLabel"><![CDATA[<Нету внешнего банка>]]></string>
+    <string name="autoArpeggio">Авто-арпеджио</string>
+    <string name="chanAllocationMode">Режим выборки каналов</string>
 </resources>

@@ -22,5 +22,7 @@
     <string name="gain_factor">Facteur de Gain</string>
     <string name="run_at_pcm_rate">Calculer au taux PCM (charge processeur moindre)</string>
     <string name="emulatorType">Émulateur OPN2/OPNA</string>
-    <string name="noCustomBankLabel"><![CDATA[<No custom bank>]]></string>
+    <string name="noCustomBankLabel"><![CDATA[<Pas de banque personnalisée>]]></string>
+    <string name="autoArpeggio">Arpège automatique</string>
+    <string name="chanAllocationMode">Mode d\'allocation des canaux</string>
 </resources>

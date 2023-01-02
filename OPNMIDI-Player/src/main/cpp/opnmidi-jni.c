@@ -246,13 +246,14 @@ void OpenSLWrap_Shutdown()
  ********************** Minimal OpenSL ES wrapper implementation END ****************************
  ************************************************************************************************/
 
-int audioCallbackFunction(sample_t *outBuffer, int num_samples)
+int audioCallbackFunction(sample_t *output, int num_samples)
 {
     OPN2_UInt8 *buff;
     int ret;
     size_t i;
 
-    buff = (OPN2_UInt8*)(outBuffer);
+    buff = (OPN2_UInt8*)(output);
+
     ret = opn2_playFormat(playingDevice, num_samples,
                           buff, buff + g_audioFormat.containerSize,
                           &g_audioFormat);
@@ -261,7 +262,7 @@ int audioCallbackFunction(sample_t *outBuffer, int num_samples)
     {
         if(g_audioFormat.type == OPNMIDI_SampleType_F32)
         {
-            float *bu = (float *)(outBuffer);
+            float *bu = (float *)(output);
             for(i = 0; i < num_samples; i++)
             {
                 *bu *= (float)g_gaining;
@@ -270,7 +271,7 @@ int audioCallbackFunction(sample_t *outBuffer, int num_samples)
         }
         else
         {
-            int16_t *bu = (int16_t *)(outBuffer);
+            int16_t *bu = (int16_t *)(output);
             for(i = 0; i < num_samples; i++)
             {
                 *bu = (int16_t)((double)(*bu) * g_gaining);
@@ -329,14 +330,12 @@ Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1errorString(
     jclass instance
 )
 {
-    const char* adlMidiErr;
     jstring ret;
 
     (void)instance;
 
     pthread_mutex_lock(&g_lock);
-    adlMidiErr = opn2_errorString();
-    ret = (*env)->NewStringUTF(env, adlMidiErr);
+    ret = (*env)->NewStringUTF(env, opn2_errorString());
     pthread_mutex_unlock(&g_lock);
 
     return ret;
@@ -345,12 +344,11 @@ Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1errorString(
 JNIEXPORT void JNICALL
 Java_ru_wohlsoft_opnmidiplayer_PlayerService_setGaining(
     JNIEnv *env,
-    jobject instance,
+    jclass instance,
     jdouble gaining
 )
 {
     (void)env; (void)instance;
-
     pthread_mutex_lock(&g_lock);
     g_gaining = (double)gaining;
     pthread_mutex_unlock(&g_lock);
@@ -429,8 +427,21 @@ Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1init(
     jlong sampleRate
 )
 {
+    struct OPN2_MIDIPlayer *p;
+
     (void)env; (void)instance;
-    return (jlong)opn2_init((long)sampleRate);
+
+    if(mutex_created)
+    {
+        assert(pthread_mutex_init(&g_lock, NULL) == 0);
+        mutex_created=true;
+    }
+    p = opn2_init((long)sampleRate);
+
+    if(p)
+        opn2_switchEmulator(p, OPNMIDI_EMU_MAME);
+
+    return (jlong)p;
 }
 
 JNIEXPORT void JNICALL
@@ -672,6 +683,20 @@ Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setVolumeRangeModel(
     pthread_mutex_unlock(&g_lock);
 }
 
+JNIEXPORT void JNICALL
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setChannelAllocMode(
+    JNIEnv *env,
+    jclass instance,
+    jlong device,
+    jint chanAlloc
+)
+{
+    (void)env; (void)instance;
+    pthread_mutex_lock(&g_lock);
+    opn2_setChannelAllocMode(OPN_DEV, (int)chanAlloc);
+    pthread_mutex_unlock(&g_lock);
+}
+
 
 JNIEXPORT jint JNICALL
 Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setRunAtPcmRate(
@@ -704,5 +729,19 @@ Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setSoftPanEnabled(
 
     pthread_mutex_lock(&g_lock);
     opn2_setSoftPanEnabled(OPN_DEV, (int)enabled);
+    pthread_mutex_unlock(&g_lock);
+}
+
+JNIEXPORT void JNICALL
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setAutoArpeggio(
+    JNIEnv *env,
+    jclass instance,
+    jlong device,
+    jint enabled
+)
+{
+    (void)env; (void)instance;
+    pthread_mutex_lock(&g_lock);
+    opn2_setAutoArpeggio(OPN_DEV, (int)enabled);
     pthread_mutex_unlock(&g_lock);
 }

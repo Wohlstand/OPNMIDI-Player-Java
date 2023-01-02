@@ -23,4 +23,6 @@
     <string name="run_at_pcm_rate">Run at PCM Rate (Reduce CPU usage)</string>
     <string name="emulatorType">OPN2/OPNA Emulator</string>
     <string name="noCustomBankLabel"><![CDATA[<No custom bank>]]></string>
+    <string name="autoArpeggio">Auto Arpeggio</string>
+    <string name="chanAllocationMode">Channel allocation mode</string>
 </resources>

@@ -21,6 +21,15 @@ android {
         }
     }
 
+    signingConfigs {
+        releaseci {
+            storeFile file("release-key.jks")
+            storePassword = release_store_password
+            keyAlias = release_key_alias
+            keyPassword = release_key_password
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
@@ -28,6 +37,13 @@ android {
             debuggable false
             jniDebuggable false
             renderscriptDebuggable false
+        }
+        releaseci {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            buildConfigField "String", "PIN_ALIAS", "\"$pin_alias\""
+            buildConfigField "String", "DB_PASS_ALIAS", "\"$db_pass_alias\""
+            signingConfig signingConfigs.releaseci
         }
         debug {
             debuggable true

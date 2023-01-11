@@ -1,5 +1,11 @@
 apply plugin: 'com.android.application'
 
+def release_store_password = System.env.RELEASE_STORE_PASSWORD
+def release_key_password = System.env.RELEASE_KEY_PASSWORD
+def release_key_alias = System.env.RELEASE_KEY_ALIAS
+def pin_alias = System.env.PIN_ALIAS
+def db_pass_alias = System.env.DB_PASS_ALIAS
+
 android {
     compileSdkVersion 32
     buildToolsVersion '30.0.3'

@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - main
+      - master
       - devel
       - versus-ci-android
   pull_request:
     branches:
       - main
+      - master
 
 #defaults:
 #  run:

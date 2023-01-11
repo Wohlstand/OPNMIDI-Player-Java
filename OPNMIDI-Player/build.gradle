@@ -1,12 +1,12 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 32
     buildToolsVersion '30.0.3'
     defaultConfig {
         applicationId "ru.wohlsoft.opnmidiplayer"
         minSdkVersion 14
-        targetSdkVersion 30
+        targetSdkVersion 32
         versionCode 1050006
         versionName '1.5.0.6'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
@@ -46,7 +46,8 @@ android {
     }
     productFlavors {
     }
-    lintOptions {
+    namespace 'ru.wohlsoft.opnmidiplayer'
+    lint {
         abortOnError false
         checkReleaseBuilds false
     }
@@ -54,11 +55,11 @@ android {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
+    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
     androidTestImplementation('androidx.test.espresso:espresso-core:3.1.0', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
-    implementation 'androidx.appcompat:appcompat:1.2.0'
-    compileOnly 'junit:junit:4.13'
-    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+    implementation 'androidx.appcompat:appcompat:1.5.1'
+    compileOnly 'junit:junit:4.13.2'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 }

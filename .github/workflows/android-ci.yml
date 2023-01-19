@@ -83,7 +83,7 @@ jobs:
           fi
 
           mv OPNMIDI-Player/build/outputs/apk/releaseci/OPNMIDI-Player-releaseci.apk OPNMIDI-Player-android-${BRANCH_NAME_RES}.apk
-          mv OPNMIDI-Player/build/outputs/apk/releaseci/OPNMIDI-Player-releaseci.aab OPNMIDI-Player-android-${BRANCH_NAME_RES}.aab
+          mv OPNMIDI-Player/build/outputs/bundle/releaseci/OPNMIDI-Player-releaseci.aab OPNMIDI-Player-android-${BRANCH_NAME_RES}.aab
 
       - name: Upload APK
         if: success()

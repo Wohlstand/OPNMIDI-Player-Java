@@ -89,14 +89,14 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v3
         with:
-          name: OPNMIDI-Player-android-${BRANCH_NAME_RES}
+          name: OPNMIDI-Player-android-APK
           path: OPNMIDI-Player-android-*.apk
 
       - name: Upload AAB
         if: success()
         uses: actions/upload-artifact@v3
         with:
-          name: OPNMIDI-Player-android-${BRANCH_NAME_RES}
+          name: OPNMIDI-Player-android-AAB
           path: OPNMIDI-Player-android-*.aab
 
       - name: Deploy to builds.wohlsoft.ru

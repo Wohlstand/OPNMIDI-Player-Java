@@ -120,8 +120,17 @@ if(NOT EMSCRIPTEN
    AND NOT NINTENDO_WIIU
    AND NOT NINTENDO_SWITCH
    AND NOT MSDOS)
-    option(libOPNMIDI_STATIC   "Build static library of libOPNMIDI" ON)
-    option(libOPNMIDI_SHARED   "Build shared library of libOPNMIDI" OFF)
+    set(libOPNMIDI_STATIC_ENABLED_BY_DEFAULT ON)
+    set(libOPNMIDI_SHARED_ENABLED_BY_DEFAULT OFF)
+
+    # When defined, respect CMake's BUILD_SHARED_LIBS setting
+    if (BUILD_SHARED_LIBS)
+        set(libOPNMIDI_SHARED_ENABLED_BY_DEFAULT ON)
+        set(libOPNMIDI_STATIC_ENABLED_BY_DEFAULT OFF)
+    endif()
+
+    option(libOPNMIDI_STATIC   "Build static library of libOPNMIDI" ${libOPNMIDI_STATIC_ENABLED_BY_DEFAULT})
+    option(libOPNMIDI_SHARED   "Build shared library of libOPNMIDI" ${libOPNMIDI_SHARED_ENABLED_BY_DEFAULT})
 else()
     set(libOPNMIDI_STATIC ON)
     set(libOPNMIDI_SHARED OFF)
@@ -154,8 +163,6 @@ option(WITH_EXTRA_BANKS     "Install extra bank files" OFF)
 if(WIN32)
     option(WITH_WINMMDRV    "Build a WinMM MIDI driver" OFF)
 endif()
-
-set(libOPNMIDI_INSTALLS)
 
 include_directories(${libOPNMIDI_SOURCE_DIR}/include)
 include_directories(${libOPNMIDI_SOURCE_DIR}/src/)
@@ -317,10 +324,9 @@ if(libOPNMIDI_STATIC OR WITH_VLC_PLUGIN)
     else()
         set_target_properties(OPNMIDI_static PROPERTIES OUTPUT_NAME OPNMIDI)
     endif()
-    target_include_directories(OPNMIDI_static PUBLIC ${libOPNMIDI_SOURCE_DIR}/include)
+    target_include_directories(OPNMIDI_static PUBLIC $<BUILD_INTERFACE:${libOPNMIDI_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
     set_legacy_standard(OPNMIDI_static)
     set_visibility_hidden(OPNMIDI_static)
-    list(APPEND libOPNMIDI_INSTALLS OPNMIDI_static)
 
     # -fPIC thing
     if(ENABLE_FPIC)
@@ -340,10 +346,9 @@ if(libOPNMIDI_SHARED)
         VERSION ${libOPNMIDI_VERSION}
         SOVERSION ${libOPNMIDI_VERSION_MAJOR}
     )
-    target_include_directories(OPNMIDI_shared PUBLIC ${libOPNMIDI_SOURCE_DIR}/include)
+    target_include_directories(OPNMIDI_shared PUBLIC $<BUILD_INTERFACE:${libOPNMIDI_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
     set_legacy_standard(OPNMIDI_shared)
     set_visibility_hidden(OPNMIDI_shared)
-    list(APPEND libOPNMIDI_INSTALLS OPNMIDI_shared)
 
     if(WIN32)
         target_compile_definitions(OPNMIDI_shared PRIVATE "-DOPNMIDI_BUILD_DLL")
@@ -416,16 +421,44 @@ if(WITH_HQ_RESAMPLER)
     endif()
 endif()
 
-install(TARGETS ${libOPNMIDI_INSTALLS}
-        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+if(libOPNMIDI_STATIC)
+    install(TARGETS OPNMIDI_static
+            EXPORT libOPNMIDIStaticTargets
+            RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+            LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+            ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+
+    install(EXPORT libOPNMIDIStaticTargets
+            FILE libOPNMIDI-static-targets.cmake
+            NAMESPACE libOPNMIDI::
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/libOPNMIDI")
+endif()
+
+if(libOPNMIDI_SHARED)
+    install(TARGETS OPNMIDI_shared
+            EXPORT libOPNMIDISharedTargets
+            RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+            LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+            ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+
+    install(EXPORT libOPNMIDISharedTargets
+            FILE libOPNMIDI-shared-targets.cmake
+            NAMESPACE libOPNMIDI::
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/libOPNMIDI")
+endif()
 
 install(FILES
         include/opnmidi.h
         #include/opnmidi.hpp # WIP
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(libOPNMIDIConfig.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/libOPNMIDIConfig.cmake"
+    PATH_VARS CMAKE_INSTALL_PREFIX CMAKE_INSTALL_FULL_BINDIR CMAKE_INSTALL_FULL_INCLUDEDIR CMAKE_INSTALL_FULL_LIBDIR
+    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/libOPNMIDI"
+)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libOPNMIDIConfig.cmake
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/libOPNMIDI")
 
 if(WITH_EXTRA_BANKS AND NOT APPLE)
     file(GLOB WOPN_FILES ${libOPNMIDI_SOURCE_DIR}/fm_banks/*.wopn)

@@ -779,8 +779,11 @@ public class Player extends AppCompatActivity
 
     private boolean checkFilePermissions(int requestCode)
     {
+        if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN)
+            return false;
+
         final int grant = PackageManager.PERMISSION_GRANTED;
-        final String exStorage = Manifest.permission.WRITE_EXTERNAL_STORAGE;
+        final String exStorage = Manifest.permission.READ_EXTERNAL_STORAGE;
 
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
             return false; /* Has no effect, the manage file storage permission is used instead of this */
@@ -849,12 +852,15 @@ public class Player extends AppCompatActivity
             b.show();
             return false;
         }
+
         return true;
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String[] permissions,
+                                           @NonNull int[] grantResults)
+    {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
         if(grantResults.length == 0)

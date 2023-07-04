@@ -18,7 +18,11 @@ import android.os.IBinder;
 import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.util.Log;
+import android.widget.Toast;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -429,8 +433,10 @@ public class PlayerService extends Service {
             return false;
         }
 
-        if(AppSettings.getBankPath().isEmpty() || !AppSettings.getUseCustomBank()) {
-            try {
+        if(AppSettings.getBankPath().isEmpty() || !AppSettings.getUseCustomBank())
+        {
+            try
+            {
                 InputStream is = getAssets().open("xg.wopn");
                 int size = is.available();
                 byte[] buffer = new byte[size];
@@ -441,16 +447,52 @@ public class PlayerService extends Service {
                     m_lastErrorString = adl_errorInfo(MIDIDevice);
                     return false;
                 }
-            } catch(IOException e) {
+            }
+            catch(IOException e)
+            {
                 m_lastErrorString = e.getMessage();
                 return false;
             }
-        } else {
-            if(adl_openBankFile(MIDIDevice, AppSettings.getBankPath()) < 0) {
-                m_lastErrorString = adl_errorInfo(MIDIDevice);
-                return false;
+        }
+        else
+        {
+            String bPath = AppSettings.getBankPath();
+            if(bPath.startsWith("/storage/") || bPath.startsWith("/sdcard/"))
+            {
+                if(adl_openBankFile(MIDIDevice, bPath) < 0)
+                {
+                    m_lastErrorString = adl_errorInfo(MIDIDevice);
+                    return false;
+                }
+            }
+            else
+            {
+                File bank = new File(bPath);
+                byte[] bankData = new byte[(int)bank.length()];
+
+                try(FileInputStream fis = new FileInputStream(bank))
+                {
+                    fis.read(bankData);
+                }
+                catch (FileNotFoundException e)
+                {
+                    Toast.makeText(getApplicationContext(), e.toString(), Toast.LENGTH_LONG).show();
+                    return false;
+                }
+                catch (IOException e)
+                {
+                    Toast.makeText(getApplicationContext(), e.toString(), Toast.LENGTH_LONG).show();
+                    return false;
+                }
+
+                if(adl_openBankData(MIDIDevice, bankData) < 0)
+                {
+                    m_lastErrorString = adl_errorInfo(MIDIDevice);
+                    return false;
+                }
             }
         }
+
         return true;
     }
 

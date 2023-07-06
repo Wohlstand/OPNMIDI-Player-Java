@@ -72,7 +72,7 @@ public class Player extends AppCompatActivity
     private boolean             m_needMusicReload = false;
 
 
-    private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver()
+    private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver()
     {
         @Override
         public void onReceive(Context context, Intent intent)
@@ -271,17 +271,21 @@ public class Player extends AppCompatActivity
         sEmulator.setAdapter(adapterEMU);
         sEmulator.setSelection(AppSettings.getEmulator());
 
-        sEmulator.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        sEmulator.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener()
+        {
             public void onItemSelected(AdapterView<?> parent,
-                                       View itemSelected, int selectedItemPosition, long selectedId) {
+                                       View itemSelected,
+                                       int selectedItemPosition,
+                                       long selectedId)
+            {
                 if(m_bound)
                     m_service.setEmulator(selectedItemPosition);
                 // Unlike other options, this should be set after an engine-side update
                 AppSettings.setEmulator(selectedItemPosition);
             }
 
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
+            public void onNothingSelected(AdapterView<?> parent)
+            {}
         });
 
         /*
@@ -296,17 +300,20 @@ public class Player extends AppCompatActivity
         sVolModel.setAdapter(adapterVM);
         sVolModel.setSelection(AppSettings.getVolumeModel());
 
-        sVolModel.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        sVolModel.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener()
+        {
             public void onItemSelected(AdapterView<?> parent,
-                                       View itemSelected, int selectedItemPosition, long selectedId)
+                                       View itemSelected,
+                                       int selectedItemPosition,
+                                       long selectedId)
             {
                 AppSettings.setVolumeModel(selectedItemPosition);
                 if(m_bound)
                     m_service.setVolumeModel(selectedItemPosition);
             }
 
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
+            public void onNothingSelected(AdapterView<?> parent)
+            {}
         });
 
         /*
@@ -321,17 +328,20 @@ public class Player extends AppCompatActivity
         sChanMode.setAdapter(adapterCA);
         sChanMode.setSelection(AppSettings.getChanAlocMode() + 1);
 
-        sChanMode.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        sChanMode.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener()
+        {
             public void onItemSelected(AdapterView<?> parent,
-                                       View itemSelected, int selectedItemPosition, long selectedId)
+                                       View itemSelected,
+                                       int selectedItemPosition,
+                                       long selectedId)
             {
                 AppSettings.setChanAllocMode(selectedItemPosition - 1);
                 if(m_bound)
                     m_service.setChanAllocMode(selectedItemPosition - 1);
             }
 
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
+            public void onNothingSelected(AdapterView<?> parent)
+            {}
         });
 
         /*
@@ -421,9 +431,9 @@ public class Player extends AppCompatActivity
             {
                 int g = m_chipsCount;
                 g--;
-                if(g < 1) {
+                if(g < 1)
                     return;
-                }
+
                 onChipsCountUpdate(g, false);
             }
         });
@@ -432,12 +442,13 @@ public class Player extends AppCompatActivity
         numChipsPlus.setOnClickListener(new View.OnClickListener()
         {
             @Override
-            public void onClick(View view) {
+            public void onClick(View view)
+            {
                 int g = m_chipsCount;
                 g++;
-                if(g > 100) {
+                if(g > 100)
                     return;
-                }
+
                 onChipsCountUpdate(g, false);
             }
         });
@@ -532,22 +543,20 @@ public class Player extends AppCompatActivity
         bindPlayerService();
         Intent intent = new Intent(this, PlayerService.class);
         intent.setAction(PlayerService.ACTION_START_FOREGROUND_SERVICE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             startForegroundService(intent);
-        } else {
+        else
             startService(intent);
-        }
     }
 
     private void playerServiceStop()
     {
         Intent intent = new Intent(this, PlayerService.class);
         intent.setAction(PlayerService.ACTION_CLOSE_FOREGROUND_SERVICE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             startForegroundService(intent);
-        } else {
+        else
             startService(intent);
-        }
     }
 
     @Override
@@ -574,22 +583,28 @@ public class Player extends AppCompatActivity
             {
                 Log.d(LOG_TAG, "Quit: Trying to stop seeker");
                 seekerStop();
-                if(m_bound) {
+                if(m_bound)
+                {
                     Log.d(LOG_TAG, "Quit: Stopping player");
                     m_service.playerStop();
                     Log.d(LOG_TAG, "Quit: De-Initializing player");
                     m_service.unInitPlayer();
                 }
+
                 Log.d(LOG_TAG, "Quit: Stopping player service");
                 playerServiceStop();
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN)
+                {
                     Log.d(LOG_TAG, "Quit: Finish Affinity");
                     Player.this.finishAffinity();
-                } else {
+                }
+                else
+                {
                     Log.d(LOG_TAG, "Quit: Just finish");
                     Player.this.finish();
                 }
+
                 Log.d(LOG_TAG, "Quit: Collect garbage");
                 System.gc();
             }
@@ -599,7 +614,8 @@ public class Player extends AppCompatActivity
         openfb.setOnClickListener(new View.OnClickListener()
         {
             @Override
-            public void onClick(View view) {
+            public void onClick(View view)
+            {
                 OnOpenFileClick(view);
             }
         });
@@ -608,7 +624,8 @@ public class Player extends AppCompatActivity
         playPause.setOnClickListener(new View.OnClickListener()
         {
             @Override
-            public void onClick(View view) {
+            public void onClick(View view)
+            {
                 OnPlayClick(view);
             }
         });
@@ -617,7 +634,8 @@ public class Player extends AppCompatActivity
         restartBtn.setOnClickListener(new View.OnClickListener()
         {
             @Override
-            public void onClick(View view) {
+            public void onClick(View view)
+            {
                 OnRestartClick(view);
             }
         });
@@ -626,7 +644,8 @@ public class Player extends AppCompatActivity
         openBankFileButton.setOnClickListener(new View.OnClickListener()
         {
             @Override
-            public void onClick(View view) {
+            public void onClick(View view)
+            {
                 OnOpenBankFileClick(view);
             }
         });
@@ -645,11 +664,12 @@ public class Player extends AppCompatActivity
     private boolean isPlayerRunning()
     {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (PlayerService.class.getName().equals(service.service.getClassName())) {
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE))
+        {
+            if (PlayerService.class.getName().equals(service.service.getClassName()))
                 return true;
-            }
         }
+
         return false;
     }
 
@@ -682,21 +702,24 @@ public class Player extends AppCompatActivity
     }
 
     @Override
-    protected void onStop() {
+    protected void onStop()
+    {
         super.onStop();
         // Unbind from the service
-        if (m_bound) {
+        if (m_bound)
+        {
             unbindService(mConnection);
             m_bound = false;
         }
     }
 
-    public boolean onKeyUp(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_MENU) {
-
-            /***
-             * TODO: Rpleace this crap with properly made settings box
-             * (this one can't receive changed value for "input" EditText field)
+    public boolean onKeyUp(int keyCode, KeyEvent event)
+    {
+        if (keyCode == KeyEvent.KEYCODE_MENU)
+        {
+            /*
+              TODO: Replace this crap with properly made settings box
+              (this one can't receive changed value for "input" EditText field)
              */
 
             AlertDialog.Builder alert = new AlertDialog.Builder(this);
@@ -709,19 +732,22 @@ public class Player extends AppCompatActivity
             input.setRawInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
             alert.setView(input);
 
-            if(m_bound) {
+            if(m_bound)
                 input.setText(String.format(Locale.getDefault(), "%g", AppSettings.getGaining()));
-            }
 
-            alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int whichButton) {
+            alert.setPositiveButton("Ok", new DialogInterface.OnClickListener()
+            {
+                public void onClick(DialogInterface dialog, int whichButton)
+                {
                     String txtvalue = input.getText().toString();
                     onGainUpdate(Double.parseDouble(txtvalue), false);
                 }
             });
 
-            alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int whichButton) {
+            alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener()
+            {
+                public void onClick(DialogInterface dialog, int whichButton)
+                {
                     // Canceled.
                 }
             });
@@ -729,6 +755,7 @@ public class Player extends AppCompatActivity
             alert.show();
             return true;
         }
+
         return super.onKeyUp(keyCode, event);
     }
 
@@ -747,13 +774,15 @@ public class Player extends AppCompatActivity
             if(!m_service.hasLoadedMusic())
                 return;
 
-            if(!m_service.isPlaying()) {
+            if(!m_service.isPlaying())
+            {
                 playerServiceStart();
                 seekerStart();
             }
 
             m_service.togglePlayPause();
-            if(!m_service.isPlaying()) {
+            if(!m_service.isPlaying())
+            {
                 seekerStop();
                 playerServiceStop();
             }
@@ -762,13 +791,17 @@ public class Player extends AppCompatActivity
 
     public void OnRestartClick(View view)
     {
-        if(m_bound) {
+        if(m_bound)
+        {
             if(!m_service.hasLoadedMusic())
                 return;
-            if(!m_service.isPlaying()) {
+
+            if(!m_service.isPlaying())
+            {
                 playerServiceStart();
                 seekerStart();
             }
+
             m_service.playerRestart();
         }
     }
@@ -782,6 +815,7 @@ public class Player extends AppCompatActivity
         final String postNotify = Manifest.permission.POST_NOTIFICATIONS;
         if(ContextCompat.checkSelfPermission(this, postNotify) == grant)
             return;
+
         // Should we show an explanation?
         if(ActivityCompat.shouldShowRequestPermissionRationale(this, postNotify))
         {
@@ -970,9 +1004,7 @@ public class Player extends AppCompatActivity
 
         if(requestCode == PICK_BANK_FILE)
         {
-            String tempBank = toTempFile(uri, "current_bank.wopn");
-
-            m_lastBankPath = tempBank;
+            m_lastBankPath = toTempFile(uri, "current_bank.wopn");
             AppSettings.setBankPath(m_lastBankPath);
 
             TextView cbl = (TextView) findViewById(R.id.bankFileName);
@@ -1141,13 +1173,16 @@ public class Player extends AppCompatActivity
         {
             //Reload bank for a case if CMF file was passed that cleans custom bank
             m_service.reloadBank();
-            if (!m_service.openMusic(m_lastMusicPath)) {
+            if (!m_service.openMusic(m_lastMusicPath))
+            {
                 AlertDialog.Builder b = new AlertDialog.Builder(Player.this);
                 b.setTitle("Failed to open file");
                 b.setMessage("Can't open music file because of " + m_service.getLastError());
                 b.setNegativeButton(android.R.string.ok, null);
                 b.show();
-            } else {
+            }
+            else
+            {
                 SeekBar musPos = (SeekBar) findViewById(R.id.musPos);
                 musPos.setMax(m_service.getSongLength());
                 musPos.setProgress(0);
@@ -1159,15 +1194,11 @@ public class Player extends AppCompatActivity
 
     void onChipsCountUpdate(int chipsCount, boolean silent)
     {
-        if(chipsCount < 1) {
-            chipsCount = 1;
-        } else if(chipsCount > 100) {
-            chipsCount = 100;
-        }
+        m_chipsCount = Math.max(1, Math.min(100, chipsCount));
 
-        m_chipsCount = chipsCount;
         AppSettings.setChipsCount(m_chipsCount);
-        if(m_bound && !silent) {
+        if(m_bound && !silent)
+        {
             m_service.applySetup();
             Log.d(LOG_TAG, String.format(Locale.getDefault(), "Chips: Written=%d", m_chipsCount));
         }
@@ -1180,9 +1211,8 @@ public class Player extends AppCompatActivity
     {
         gainLevel = round(gainLevel, 1);
         AppSettings.setGaining(gainLevel);
-        if(m_bound && !silent) {
+        if(m_bound && !silent)
             m_service.gainingSet(gainLevel);
-        }
         TextView gainFactor = (TextView)findViewById(R.id.gainFactor);
         gainFactor.setText(String.format(Locale.getDefault(), "%.1f", gainLevel));
     }

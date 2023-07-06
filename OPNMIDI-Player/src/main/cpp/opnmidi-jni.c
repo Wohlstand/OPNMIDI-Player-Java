@@ -395,6 +395,8 @@ Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setEmulator(
     (void)env; (void)instance;
 
     pthread_mutex_lock(&g_lock);
+    if(emulator >= OPNMIDI_VGM_DUMPER)
+        ++emulator; // Skip VGM dumper at all
     ret = (jint)opn2_switchEmulator(OPN_DEV, (int)emulator);
     pthread_mutex_unlock(&g_lock);
 

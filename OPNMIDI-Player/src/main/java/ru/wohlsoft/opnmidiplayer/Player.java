@@ -258,12 +258,13 @@ public class Player extends AppCompatActivity
         final String[] emulatorItems =
         {
             "Mame YM2612 OPN2 (accurate and fast)",
-            "Nuked OPN2 (very accurate and !HEAVY!)",
+            "Nuked OPN2 (YM3438) (very accurate and !HEAVY!)",
             "GENS OPN2 (broken SSG-EG and envelopes)",
-            "Genesis Plus GX OPN2 (EXPERIMENTAL)",
+            "YMFM OPN2",
             "Neko Project II OPNA (semi-accurate and fast)",
             "Mame YM2608 OPNA (accurate and fast)",
-            "PMDWin OPNA (EXPERIMENTAL)"
+            "YMFM OPNA",
+            "Nuked OPN2 (YM2612)",
         };
 
         ArrayAdapter<String> adapterEMU = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, emulatorItems);

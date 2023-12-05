@@ -18,8 +18,8 @@ android {
         applicationId "ru.wohlsoft.opnmidiplayer"
         minSdkVersion 14
         targetSdkVersion 34
-        versionCode 1050013
-        versionName '1.5.0.13'
+        versionCode 1050014
+        versionName '1.5.0.14'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         externalNativeBuild {
             cmake {

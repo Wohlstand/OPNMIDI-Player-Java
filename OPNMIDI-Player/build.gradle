@@ -7,8 +7,7 @@ def pin_alias = System.env.PIN_ALIAS
 def db_pass_alias = System.env.DB_PASS_ALIAS
 
 android {
-    compileSdkVersion 33
-    buildToolsVersion '30.0.3'
+    compileSdk 34
 
     // Note: The NDK 23 is SIGNIFICANTLY important, because of the support for non-NEON and older Android versions
     //       The NDK 24 removes the support for Android 4.1, 4.2, and 4.3.
@@ -18,7 +17,7 @@ android {
     defaultConfig {
         applicationId "ru.wohlsoft.opnmidiplayer"
         minSdkVersion 14
-        targetSdkVersion 33
+        targetSdkVersion 34
         versionCode 1050013
         versionName '1.5.0.13'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'

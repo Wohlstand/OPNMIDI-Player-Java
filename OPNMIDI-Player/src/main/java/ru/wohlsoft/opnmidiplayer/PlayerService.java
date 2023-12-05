@@ -103,8 +103,10 @@ public class PlayerService extends Service {
     }
 
     private void stopSeekerTimer() {
-        if(m_seekerTimer != null && m_seekerRunnable != null)
+        if (m_seekerTimer != null && m_seekerRunnable != null)
+        {
             m_seekerTimer.removeCallbacks(m_seekerRunnable);
+        }
     }
 
     public PlayerService()
@@ -127,8 +129,10 @@ public class PlayerService extends Service {
     }
 
     public void updateSeekBar(int percentage) {
-        if(m_lastSeekPosition == percentage)
+        if (m_lastSeekPosition == percentage)
+        {
             return; //Do nothing
+        }
         m_lastSeekPosition = percentage;
 
         Intent intent = new Intent("OPNMIDI_Broadcast");
@@ -246,15 +250,22 @@ public class PlayerService extends Service {
         {
             IntentFilter iF = new IntentFilter(Intent.ACTION_MEDIA_BUTTON);
             iF.setPriority(IntentFilter.SYSTEM_HIGH_PRIORITY + 42);
-            registerReceiver(mButtonReceiver, iF);
+
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                registerReceiver(mButtonReceiver, iF, Context.RECEIVER_NOT_EXPORTED);
+            else
+                registerReceiver(mButtonReceiver, iF);
+
             mButtonReceiverRegistered = true;
         }
     }
 
     private void stopForegroundPlayer()
     {
-        if(!m_isRunning)
+        if (!m_isRunning)
+        {
             return;
+        }
 
         if(mButtonReceiverRegistered)
         {
@@ -286,8 +297,10 @@ public class PlayerService extends Service {
     private Notification getNotify()
     {
         int serviceFlags = 0;
-        if(Build.VERSION.SDK_INT >= 31)
+        if (Build.VERSION.SDK_INT >= 31)
+        {
             serviceFlags = PendingIntent.FLAG_IMMUTABLE;
+        }
 
         // Create notification default intent.
         Intent intent = new Intent();
@@ -309,10 +322,14 @@ public class PlayerService extends Service {
             builder.setStyle(bigTextStyle);
         }
 
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+        {
             builder.setSilent(true);
+        }
         else
+        {
             builder.setNotificationSilent();
+        }
 
         builder.setWhen(System.currentTimeMillis());
         builder.setContentTitle(getResources().getString(R.string.app_name));
@@ -325,7 +342,7 @@ public class PlayerService extends Service {
             builder.setPriority(NotificationManager.IMPORTANCE_LOW);
         }
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            builder.setPriority(NotificationManager.IMPORTANCE_HIGH);
+            builder.setPriority(NotificationCompat.PRIORITY_MAX);
         }
 
         // Make head-up notification.
@@ -583,8 +600,10 @@ public class PlayerService extends Service {
 
     public void setEmulator(int emul)
     {
-        if(AppSettings.getEmulator() != emul)
+        if (AppSettings.getEmulator() != emul)
+        {
             adl_setEmulator(MIDIDevice, emul);
+        }
     }
 
     public int getSongLength()
@@ -661,8 +680,10 @@ public class PlayerService extends Service {
     }
 
     public void playerRestart() {
-        if(m_isPlaying)
+        if (m_isPlaying)
+        {
             playerStop();
+        }
         reloadBank();
         applySetup();
         openMusic(m_lastFile);

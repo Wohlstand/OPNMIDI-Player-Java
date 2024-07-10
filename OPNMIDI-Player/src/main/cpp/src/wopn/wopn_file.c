@@ -1,7 +1,7 @@
 /*
  * Wohlstand's OPN2 Bank File - a bank format to store OPN2 timbre data and setup
  *
- * Copyright (c) 2018-2023 Vitaly Novichkov <admin@wohlnet.ru>
+ * Copyright (c) 2018-2024 Vitaly Novichkov <admin@wohlnet.ru>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the "Software"),
@@ -549,7 +549,7 @@ int WOPN_SaveBankToMem(WOPNFile *file, void *dest_mem, size_t length, uint16_t v
             {
                 if(length < 34)
                     return WOPN_ERR_UNEXPECTED_ENDING;
-                strncpy((char*)cursor, bankslots[i][j].bank_name, 32);
+                memcpy(cursor, bankslots[i][j].bank_name, 32);
                 cursor[32] = bankslots[i][j].bank_midi_lsb;
                 cursor[33] = bankslots[i][j].bank_midi_msb;
                 GO_FORWARD(34);

@@ -12,4 +12,5 @@ cp -v /home/vitaly/_git_repos/libOPNMIDI/libOPNMIDIConfig.cmake.in .
 
 cp -v /home/vitaly/_git_repos/libOPNMIDI/fm_banks/xg.wopn ../assets
 
+echo "Press any key..."
 read -n 1

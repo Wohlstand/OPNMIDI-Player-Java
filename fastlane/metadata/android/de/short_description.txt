@@ -1,0 +1,1 @@
+einfacher MIDI-player, der auf der libOPNMIDI-Bibliothek aufbaut

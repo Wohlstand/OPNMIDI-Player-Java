@@ -56,6 +56,9 @@ add_library( # Sets the name of the library.
     src/main/cpp/opnmidi-jni.c
 )
 
+target_link_options(OPNMIDI_static PUBLIC "-Wl,-z,max-page-size=16384")
+target_link_options(OPNMIDI_static PUBLIC "-Wl,-z,common-page-size=16384")
+
 target_link_libraries(opnmidi-jni OPNMIDI)
 target_include_directories(opnmidi-jni PUBLIC src/main/cpp/include)
 add_dependencies(opnmidi-jni OPNMIDI_static)

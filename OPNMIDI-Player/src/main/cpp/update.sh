@@ -12,7 +12,7 @@ cp -v /home/vitaly/_git_repos/libOPNMIDI/CMakeLists.txt .
 cp -v /home/vitaly/_git_repos/libOPNMIDI/libOPNMIDIConfig.cmake.in .
 
 mkdir -p ./cmake
-cp -av /home/vitaly/_git_repos/libOPNMIDI/cmake/checks ./checks
+cp -av /home/vitaly/_git_repos/libOPNMIDI/cmake/checks ./cmake/
 
 cp -v /home/vitaly/_git_repos/libOPNMIDI/fm_banks/xg.wopn ../assets
 

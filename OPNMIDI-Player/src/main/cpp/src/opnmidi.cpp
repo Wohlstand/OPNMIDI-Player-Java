@@ -26,7 +26,7 @@
 #include "opnmidi_private.hpp"
 #include "chips/opn_chip_base.h"
 #ifndef OPNMIDI_DISABLE_MIDI_SEQUENCER
-#include "midi_sequencer.hpp"
+#include "midiseq/midi_sequencer.hpp"
 #endif
 
 /* Unify MIDI player casting and interface between ADLMIDI and OPNMIDI */
@@ -483,7 +483,7 @@ OPNMIDI_EXPORT void opn2_setVolumeRangeModel(struct OPN2_MIDIPlayer *device, int
     if(!synth.setupLocked())
     {
         if(play->m_setup.VolumeModel == OPNMIDI_VolumeModel_AUTO)//Use bank default volume model
-            synth.m_volumeScale = (Synth::VolumesScale)synth.m_insBankSetup.volumeModel;
+            synth.setFrequencyModel((Synth::VolumesScale)synth.m_insBankSetup.volumeModel);
         else
             synth.setVolumeScaleModel(static_cast<OPNMIDI_VolumeModels>(volumeModel));
     }
@@ -828,7 +828,7 @@ OPNMIDI_EXPORT const char *opn2_metaMusicTitle(struct OPN2_MIDIPlayer *device)
         return "";
     MidiPlayer *play = GET_MIDI_PLAYER(device);
     assert(play);
-    return play->m_sequencer->getMusicTitle().c_str();
+    return play->m_sequencer->getMusicTitle();
 #else
     ADL_UNUSED(device);
     return "";
@@ -843,7 +843,7 @@ OPNMIDI_EXPORT const char *opn2_metaMusicCopyright(struct OPN2_MIDIPlayer *devic
         return "";
     MidiPlayer *play = GET_MIDI_PLAYER(device);
     assert(play);
-    return play->m_sequencer->getMusicCopyright().c_str();
+    return play->m_sequencer->getMusicCopyright();
 #else
     ADL_UNUSED(device);
     return 0;
@@ -871,10 +871,10 @@ OPNMIDI_EXPORT const char *opn2_metaTrackTitle(struct OPN2_MIDIPlayer *device, s
         return "";
     MidiPlayer *play = GET_MIDI_PLAYER(device);
     assert(play);
-    const std::vector<std::string> &titles = play->m_sequencer->getTrackTitles();
+    const std::vector<BW_MidiSequencer::DataBlock> &titles = play->m_sequencer->getTrackTitles();
     if(index >= titles.size())
         return "INVALID";
-    return titles[index].c_str();
+    return reinterpret_cast<const char*>(play->m_sequencer->getData(titles[index]));
 #else
     ADL_UNUSED(device);
     ADL_UNUSED(index);
@@ -923,7 +923,7 @@ OPNMIDI_EXPORT Opn2_MarkerEntry opn2_metaMarker(struct OPN2_MIDIPlayer *device, 
     }
 
     const MidiSequencer::MIDI_MarkerEntry &mk = markers[index];
-    marker.label = mk.label.c_str();
+    marker.label = reinterpret_cast<const char*>(play->m_sequencer->getData(mk.label));
     marker.pos_time = mk.pos_time;
     marker.pos_ticks = (unsigned long)mk.pos_ticks;
 #else

@@ -1107,7 +1107,7 @@ public class Player extends AppCompatActivity
     public void openMusicFileDialog()
     {
         OpenFileDialog fileDialog = new OpenFileDialog(this)
-            .setFilter(".*\\.mid|.*\\.midi|.*\\.kar|.*\\.rmi|.*\\.mus|.*\\.xmi")
+            .setFilter(".*\\.mid|.*\\.midi|.*\\.kar|.*\\.rmi|.*\\.mus|.*\\.xmi|.*\\.hmi|.*\\.hmp|.*\\.hmq")
             .setCurrentDirectory(m_lastPath)
             .setOpenDialogListener(new OpenFileDialog.OpenDialogListener()
             {
@@ -1226,4 +1226,3 @@ public class Player extends AppCompatActivity
         gainFactor.setText(String.format(Locale.getDefault(), "%.1f", gainLevel));
     }
 }
-

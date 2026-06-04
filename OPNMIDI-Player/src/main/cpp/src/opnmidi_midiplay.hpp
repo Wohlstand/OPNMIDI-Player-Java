@@ -234,36 +234,47 @@ public:
             Phys *phys_find(unsigned chip_chan)
             {
                 Phys *ph = NULL;
-                for(unsigned i = 0; i < chip_channels_count && !ph; ++i)
+
+                for(unsigned i = 0; i < chip_channels_count && !ph && i < MaxNumPhysItemCount; ++i)
+                {
                     if(chip_channels[i].chip_chan == chip_chan)
                         ph = &chip_channels[i];
+                }
+
                 return ph;
             }
+
             Phys *phys_find_or_create(uint16_t chip_chan)
             {
                 Phys *ph = phys_find(chip_chan);
-                if(!ph) {
-                    if(chip_channels_count < MaxNumPhysItemCount) {
-                        ph = &chip_channels[chip_channels_count++];
-                        ph->chip_chan = chip_chan;
-                    }
+
+                if(!ph && chip_channels_count < MaxNumPhysItemCount)
+                {
+                    ph = &chip_channels[chip_channels_count++];
+                    ph->chip_chan = chip_chan;
                 }
+
                 return ph;
             }
+
             Phys *phys_ensure_find_or_create(uint16_t chip_chan)
             {
                 Phys *ph = phys_find_or_create(chip_chan);
                 assert(ph);
                 return ph;
             }
+
             void phys_erase_at(const Phys *ph)
             {
                 intptr_t pos = ph - chip_channels;
                 assert(pos < static_cast<intptr_t>(chip_channels_count));
-                for(intptr_t i = pos + 1; i < static_cast<intptr_t>(chip_channels_count); ++i)
+
+                for(intptr_t i = pos + 1; i < static_cast<intptr_t>(chip_channels_count) && i < MaxNumPhysItemCount; ++i)
                     chip_channels[i - 1] = chip_channels[i];
+
                 --chip_channels_count;
             }
+
             void phys_erase(unsigned chip_chan)
             {
                 Phys *ph = phys_find(chip_chan);
@@ -354,7 +365,7 @@ public:
          * @brief Emergency attempt to retrieve a free active note slot by clean-up from the junk
          * @return true if got one extra free channel, otherwise it's a dead end
          */
-        bool drop_oldest_blank_note()
+        bool drop_oldest_blank_note(OPNMIDIplay *play, size_t midCh)
         {
             // Attempt to clean blank notes
             for(notes_iterator it = activenotes.begin(); it != activenotes.end(); ++it)
@@ -376,14 +387,21 @@ public:
                 }
             }
 
+            // And then attempt to off one of working notes
+            for(notes_iterator it = activenotes.begin(); it != activenotes.end(); ++it)
+            {
+                play->noteUpdate(midCh, it, Upd_Off);
+                return true;
+            }
+
             return false;
         }
 
-        bool has_free_active_notes()
+        bool has_free_active_notes(OPNMIDIplay *play, size_t midCh)
         {
             if(activenotes.size() >= activenotes.capacity())
             {
-                if(!drop_oldest_blank_note()) // Attempt to rescue the situation
+                if(!drop_oldest_blank_note(play, midCh)) // Attempt to rescue the situation
                     return false; // Overflow!
             }
 

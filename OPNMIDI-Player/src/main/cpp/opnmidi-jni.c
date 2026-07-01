@@ -475,6 +475,21 @@ Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setLoopEnabled(
 }
 
 
+JNIEXPORT void JNICALL
+Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setModeEMIDI(
+        JNIEnv *env,
+        jclass instance,
+        jlong device,
+        jint enabled
+)
+{
+    (void)env; (void)instance;
+    pthread_mutex_lock(&g_lock);
+    opn2_setModeEMIDI(OPN_DEV, (int)enabled);
+    pthread_mutex_unlock(&g_lock);
+}
+
+
 JNIEXPORT jint JNICALL
 Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1openBankFile(
     JNIEnv *env,
@@ -680,6 +695,7 @@ Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setVolumeRangeModel(
 )
 {
     (void)env; (void)instance;
+
     pthread_mutex_lock(&g_lock);
     opn2_setVolumeRangeModel(OPN_DEV, (int)volumeModel);
     pthread_mutex_unlock(&g_lock);
@@ -698,7 +714,6 @@ Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setChannelAllocMode(
     opn2_setChannelAllocMode(OPN_DEV, (int)chanAlloc);
     pthread_mutex_unlock(&g_lock);
 }
-
 
 JNIEXPORT jint JNICALL
 Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setRunAtPcmRate(
@@ -728,7 +743,6 @@ Java_ru_wohlsoft_opnmidiplayer_PlayerService_adl_1setSoftPanEnabled(
 )
 {
     (void)env; (void)instance;
-
     pthread_mutex_lock(&g_lock);
     opn2_setSoftPanEnabled(OPN_DEV, (int)enabled);
     pthread_mutex_unlock(&g_lock);

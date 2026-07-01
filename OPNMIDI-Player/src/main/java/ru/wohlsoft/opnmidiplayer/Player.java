@@ -114,7 +114,6 @@ public class Player extends AppCompatActivity
     /** Defines callbacks for service binding, passed to bindService() */
     private final ServiceConnection mConnection = new ServiceConnection()
     {
-
         @Override
         public void onServiceConnected(ComponentName className, IBinder service)
         {
@@ -421,6 +420,47 @@ public class Player extends AppCompatActivity
                 toast.show();
             }
         });
+
+        /*
+         * Loop enable
+         */
+        CheckBox loopEnabled = (CheckBox)findViewById(R.id.loopEnabled);
+        loopEnabled.setChecked(AppSettings.getLoopEnabled());
+        loopEnabled.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener()
+        {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
+            {
+                AppSettings.setLoopEnabled(isChecked);
+                if(m_bound)
+                    m_service.setLoopEnabled(isChecked);
+                Toast toast = Toast.makeText(getApplicationContext(),
+                        "Loop toggled!", Toast.LENGTH_SHORT);
+                toast.show();
+            }
+        });
+
+        /*
+         * EMIDI mode
+         */
+        CheckBox modeEMIDI = (CheckBox)findViewById(R.id.modeEMIDI);
+        modeEMIDI.setChecked(AppSettings.getModeEMIDI());
+        modeEMIDI.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener()
+        {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
+            {
+                AppSettings.setModeEMIDI(isChecked);
+                if(m_bound)
+                    m_service.setModeEMIDI(isChecked);
+                Toast toast = Toast.makeText(getApplicationContext(),
+                        "EMIDI mode toggled!", Toast.LENGTH_SHORT);
+                toast.show();
+                // To take changes, the song restart is required
+                OnRestartClick(null);
+            }
+        });
+
 
         /*
          * Chips count
@@ -1112,7 +1152,8 @@ public class Player extends AppCompatActivity
             .setOpenDialogListener(new OpenFileDialog.OpenDialogListener()
             {
                 @Override
-                public void OnSelectedFile(Context ctx, String fileName, String lastPath) {
+                public void OnSelectedFile(Context ctx, String fileName, String lastPath)
+                {
                     processMusicFile(fileName, lastPath);
                 }
 
@@ -1201,6 +1242,7 @@ public class Player extends AppCompatActivity
         }
     }
 
+    @SuppressLint("SetTextI18n")
     void onChipsCountUpdate(int chipsCount, boolean silent)
     {
         m_chipsCount = Math.max(1, Math.min(100, chipsCount));
@@ -1220,8 +1262,10 @@ public class Player extends AppCompatActivity
     {
         gainLevel = round(gainLevel, 1);
         AppSettings.setGaining(gainLevel);
+
         if(m_bound && !silent)
             m_service.gainingSet(gainLevel);
+
         TextView gainFactor = (TextView)findViewById(R.id.gainFactor);
         gainFactor.setText(String.format(Locale.getDefault(), "%.1f", gainLevel));
     }
